@@ -244,6 +244,14 @@ textarea{font-size:.85rem;min-height:84px;font-family:ui-monospace,Menlo,Consola
 .choice:disabled,.mitem:disabled{cursor:default}
 .choice.out{opacity:.5;text-decoration:line-through;background:transparent;border-color:var(--line)}
 .choice.right{border-color:var(--good);background:var(--good-soft);opacity:1}
+.choice.pic{display:flex;align-items:center;gap:12px;padding:8px 16px 8px 8px}
+.oic{flex:none;display:inline-grid;place-items:center;width:44px;height:44px;border-radius:10px;background:radial-gradient(circle at 45% 40%,#25466F,#13294A);border:1px solid #2A496D}
+.oic + .oic{margin-left:-6px}
+.oic svg{width:36px;height:36px;display:block}
+.oic.sm{width:34px;height:34px;border-radius:8px}
+.oic.sm svg{width:28px;height:28px}
+.choice.out .oic{filter:grayscale(1)}
+[data-act="mpick"]{display:flex;align-items:center;gap:10px}
 .feedback{min-height:1.5em;margin-top:14px;font-weight:500}
 .feedback.good{color:var(--good)}
 .feedback.bad{color:var(--bad)}
@@ -1582,6 +1590,53 @@ function cellSVG(o){
   return s + `</svg>`;
 }
 
+/* ======================= ORGANELLE MINI-ICONS ======================= */
+/* Drawn in the cell diagram's colors on a 48x48 grid; shown on a dark tile so they read in both themes. */
+const OICONS = {
+  nucleus:'<circle cx="24" cy="24" r="17" fill="#3B2858" stroke="#B48BE0" stroke-width="3"/><path d="M12,22 q4,-5 8,0 t8,1 M13,31 q5,4 9,-1 t8,2 M16,15 q3,4 7,1" stroke="#9F83CC" stroke-width="1.4" fill="none" stroke-linecap="round"/><circle cx="29" cy="21" r="6" fill="#150D22" stroke="#8E6CC0" stroke-width="1.5"/>',
+  nucleolus:'<circle cx="24" cy="24" r="19" fill="#3B2858" stroke="#7E5DB0" stroke-width="1.5" stroke-dasharray="3 3"/><circle cx="24" cy="24" r="11" fill="#150D22" stroke="#C9B3EE" stroke-width="2.5"/><circle cx="21" cy="21" r="2" fill="#6E4C96"/><circle cx="27" cy="26" r="1.6" fill="#6E4C96"/>',
+  ribosome:'<circle cx="16" cy="18" r="4" fill="#F4D57A"/><circle cx="28" cy="14" r="4" fill="#F4D57A"/><circle cx="33" cy="27" r="4" fill="#F4D57A"/><circle cx="20" cy="31" r="4" fill="#F4D57A"/><circle cx="26" cy="38" r="3" fill="#F4D57A"/>',
+  "rough-er":'<path d="M10,10 Q26,24 10,38 M18,8 Q36,24 18,40 M26,7 Q46,24 26,41" stroke="#E07C9C" stroke-width="4.5" fill="none" stroke-linecap="round"/><path d="M10,10 Q26,24 10,38 M18,8 Q36,24 18,40 M26,7 Q46,24 26,41" stroke="#4A2E4F" stroke-width="1.2" fill="none" stroke-linecap="round"/><g fill="#F4D57A"><circle cx="14" cy="14" r="1.8"/><circle cx="18" cy="24" r="1.8"/><circle cx="14" cy="34" r="1.8"/><circle cx="23" cy="12" r="1.8"/><circle cx="27" cy="24" r="1.8"/><circle cx="23" cy="36" r="1.8"/><circle cx="32" cy="11" r="1.8"/><circle cx="36" cy="24" r="1.8"/><circle cx="32" cy="37" r="1.8"/></g>',
+  "smooth-er":'<path d="M6,14 q7,-7 14,0 t14,0 t14,0 M6,25 q7,-7 14,0 t14,0 t14,0 M6,36 q7,-7 14,0 t14,0 t14,0" stroke="#6FC1AF" stroke-width="5" fill="none" stroke-linecap="round"/><path d="M6,14 q7,-7 14,0 t14,0 t14,0 M6,25 q7,-7 14,0 t14,0 t14,0 M6,36 q7,-7 14,0 t14,0 t14,0" stroke="#234640" stroke-width="1.4" fill="none" stroke-linecap="round"/>',
+  golgi:'<path d="M14,8 Q2,24 14,40 M20,10 Q8,24 20,38 M26,12 Q14,24 26,36 M32,14 Q20,24 32,34" stroke="#F2A541" stroke-width="4.5" fill="none" stroke-linecap="round"/><path d="M14,8 Q2,24 14,40 M20,10 Q8,24 20,38 M26,12 Q14,24 26,36 M32,14 Q20,24 32,34" stroke="#4A3218" stroke-width="1.1" fill="none" stroke-linecap="round"/><circle cx="39" cy="17" r="3.5" fill="rgba(242,165,65,.3)" stroke="#F2A541" stroke-width="1.6"/><circle cx="40" cy="31" r="3" fill="rgba(242,165,65,.3)" stroke="#F2A541" stroke-width="1.6"/>',
+  mitochondrion:'<g transform="translate(24,24) rotate(-20)"><ellipse rx="19" ry="10.5" fill="#C85A44" stroke="#F09A80" stroke-width="2.2"/><path d="M-14,0 l3,-5.5 l3,11 l3,-11 l3,11 l3,-11 l3,11 l3,-11 l3,11 l2,-5.5" stroke="#F8C9B0" stroke-width="1.5" fill="none" stroke-linejoin="round"/></g>',
+  lysosome:'<circle cx="24" cy="24" r="14" fill="#2F4A26" stroke="#A5D46C" stroke-width="3"/><circle cx="19" cy="20" r="2.4" fill="#C9EE97"/><circle cx="28" cy="22" r="2.4" fill="#C9EE97"/><circle cx="22" cy="29" r="2.4" fill="#C9EE97"/><circle cx="29" cy="30" r="1.8" fill="#C9EE97"/>',
+  vesicle:'<circle cx="19" cy="27" r="11" fill="rgba(242,165,65,.28)" stroke="#F2A541" stroke-width="2.5"/><circle cx="34" cy="14" r="6" fill="rgba(242,165,65,.28)" stroke="#F2A541" stroke-width="2"/><circle cx="36" cy="33" r="4" fill="rgba(242,165,65,.28)" stroke="#F2A541" stroke-width="1.8"/>',
+  centrioles:'<rect x="6" y="26" width="22" height="11" rx="3" fill="#E9DDBE" stroke="#FFF4D8" stroke-width="1.3"/><path d="M12,26v11M17,26v11M22,26v11" stroke="#9C8A62" stroke-width="1.3"/><rect x="30" y="8" width="11" height="22" rx="3" fill="#E9DDBE" stroke="#FFF4D8" stroke-width="1.3"/><path d="M30,14h11M30,19h11M30,24h11" stroke="#9C8A62" stroke-width="1.3"/>',
+  membrane:'<path d="M-2,48 L-2,22 Q24,6 50,22 L50,48 Z" fill="#25466F"/><path d="M-2,22 Q24,6 50,22" stroke="#A7D8F0" stroke-width="6" fill="none"/><path d="M-2,22 Q24,6 50,22" stroke="#3F6E9C" stroke-width="1.6" fill="none"/><circle cx="16" cy="32" r="1.6" fill="#F4D57A"/><circle cx="31" cy="36" r="1.6" fill="#F4D57A"/>',
+  envelope:'<path d="M-2,44 Q24,4 50,44" stroke="#B48BE0" stroke-width="4" fill="none" stroke-dasharray="15 5"/><path d="M5,46 Q24,15 43,46" stroke="#7E5DB0" stroke-width="2" fill="none" stroke-dasharray="11 5"/><path d="M5,46 Q24,15 43,46 L50,48 L-2,48 Z" fill="#3B2858" opacity=".7"/><g fill="#F4D57A"><circle cx="6" cy="31" r="1.7"/><circle cx="14" cy="21" r="1.7"/><circle cx="34" cy="21" r="1.7"/><circle cx="42" cy="31" r="1.7"/></g>',
+  cytoskeleton:'<path d="M4,10 L44,38 M6,34 L42,8 M24,4 L22,44 M4,22 Q24,30 44,20" stroke="#A7D8F0" stroke-width="1.8" fill="none" stroke-linecap="round" opacity=".9"/><path d="M10,4 Q16,24 8,44 M38,4 Q30,26 40,44" stroke="#7FC4EA" stroke-width="1.2" fill="none" opacity=".75"/><g fill="#FFFFFF"><circle cx="23.4" cy="24.6" r="2"/><circle cx="13" cy="16" r="1.5"/><circle cx="35" cy="31" r="1.5"/></g>',
+  cilia:'<path d="M-2,48 L-2,36 Q24,30 50,36 L50,48 Z" fill="#25466F"/><path d="M-2,36 Q24,30 50,36" stroke="#A7D8F0" stroke-width="4" fill="none"/><path d="M6,34 q-3,-8 1,-14 t0,-14 M15,33 q-3,-8 1,-14 t0,-14 M24,32 q-3,-8 1,-14 t0,-14 M33,33 q-3,-8 1,-14 t0,-14 M42,34 q-3,-8 1,-14 t0,-14" stroke="#DFF2FC" stroke-width="2" fill="none" stroke-linecap="round"/>',
+  microvilli:'<path d="M-2,48 L-2,34 L50,34 L50,48 Z" fill="#25466F"/><g fill="#25466F" stroke="#A7D8F0" stroke-width="2"><path d="M4,35 V14 a3,3 0 0 1 6,0 V35"/><path d="M14,35 V12 a3,3 0 0 1 6,0 V35"/><path d="M24,35 V14 a3,3 0 0 1 6,0 V35"/><path d="M34,35 V12 a3,3 0 0 1 6,0 V35"/></g><path d="M-2,35 H50" stroke="#A7D8F0" stroke-width="3"/>',
+  flagellum:'<ellipse cx="13" cy="24" rx="9" ry="7" fill="#25466F" stroke="#A7D8F0" stroke-width="2"/><path d="M22,24 C26,16 30,32 34,24 S42,16 46,24" stroke="#DFF2FC" stroke-width="2.5" fill="none" stroke-linecap="round"/>',
+  cellwall:'<rect x="5" y="5" width="38" height="38" rx="4" fill="#3E6B2E" stroke="#8CC870" stroke-width="2.5"/><rect x="10" y="10" width="28" height="28" rx="3" fill="#1F3A2A" stroke="#A7D8F0" stroke-width="1.5"/><path d="M5,17h5M5,31h5M38,17h5M38,31h5M17,5v5M31,5v5M17,38v5M31,38v5" stroke="#8CC870" stroke-width="1.2"/>',
+  chloroplast:'<ellipse cx="24" cy="24" rx="20" ry="12" fill="#2F7A3A" stroke="#9BE08A" stroke-width="2.2"/><g fill="#9BE08A"><rect x="9" y="18" width="7" height="2.6" rx="1"/><rect x="9" y="22" width="7" height="2.6" rx="1"/><rect x="9" y="26" width="7" height="2.6" rx="1"/><rect x="20.5" y="16" width="7" height="2.6" rx="1"/><rect x="20.5" y="20" width="7" height="2.6" rx="1"/><rect x="20.5" y="24" width="7" height="2.6" rx="1"/><rect x="20.5" y="28" width="7" height="2.6" rx="1"/><rect x="32" y="19" width="7" height="2.6" rx="1"/><rect x="32" y="23" width="7" height="2.6" rx="1"/><rect x="32" y="27" width="7" height="2.6" rx="1"/></g>',
+  vacuole:'<rect x="4" y="6" width="40" height="36" rx="4" fill="#1F3A2A" stroke="#8CC870" stroke-width="2.5"/><rect x="10" y="11" width="28" height="26" rx="8" fill="rgba(127,196,234,.35)" stroke="#7FC4EA" stroke-width="2"/><circle cx="9" cy="37" r="2" fill="#F4D57A"/>',
+  cytoplasm:'<path d="M8,26 C6,12 20,6 30,8 C42,10 46,22 42,32 C38,42 22,44 14,40 C9,37 8,32 8,26 Z" fill="#25466F" stroke="#A7D8F0" stroke-width="2.2"/><g fill="#7FC4EA" opacity=".8"><circle cx="18" cy="20" r="1.6"/><circle cx="30" cy="16" r="1.4"/><circle cx="34" cy="28" r="1.6"/><circle cx="22" cy="32" r="1.4"/><circle cx="27" cy="24" r="1.2"/></g>'
+};
+/* Answer-option text → icon key. Lowercased, with a leading "a"/"the" removed. */
+const ONAMES = {
+  "nucleus":"nucleus", "nucleolus":"nucleolus", "nucleoli":"nucleolus",
+  "ribosome":"ribosome", "ribosomes":"ribosome", "rough er":"rough-er", "smooth er":"smooth-er", "golgi apparatus":"golgi",
+  "mitochondrion":"mitochondrion", "mitochondria":"mitochondrion", "lysosome":"lysosome", "lysosomes":"lysosome",
+  "vesicle":"vesicle", "vesicles":"vesicle", "centriole":"centrioles", "centrioles":"centrioles",
+  "cell membrane":"membrane", "nuclear envelope":"envelope", "cytoskeleton":"cytoskeleton", "cytoplasm":"cytoplasm",
+  "cilia":"cilia", "microvilli":"microvilli", "flagellum":"flagellum", "single flagellum":"flagellum", "single long flagellum":"flagellum",
+  "cell wall":"cellwall", "thick, rigid cell wall":"cellwall", "chloroplast":"chloroplast", "chloroplasts":"chloroplast",
+  "large central vacuole":"vacuole", "central vacuole":"vacuole",
+  /* short descriptive options in the intestine drawer, where every choice leads with a structure */
+  "microvilli, tiny fingerlike folds that add surface area":"microvilli", "cilia that sweep the food away":"cilia"
+};
+function orgKeys(text){
+  const one = t => ONAMES[t.trim().toLowerCase().replace(/^(a|an|the) /, "")];
+  const k = one(text); if(k) return [k];
+  const parts = text.split(" and ");
+  if(parts.length === 2 && one(parts[0]) && one(parts[1])) return [one(parts[0]), one(parts[1])];
+  return null;
+}
+const oicon = (k, cls) => `<span class="oic${cls ? " " + cls : ""}" aria-hidden="true"><svg viewBox="0 0 48 48">${OICONS[k]}</svg></span>`;
+const oicons = (text, cls) => (orgKeys(text) || []).map(k => oicon(k, cls)).join("");
+
 /* ======================= CENTRIOLE MITOSIS ANIMATION ======================= */
 const MITO = [
   {name:"Prophase", cap:"The centrioles split into two pairs and move to opposite poles, growing spindle fibers as they go."},
@@ -1742,10 +1797,10 @@ function lockHTML(r, big){
 
 /* --- question bodies --- */
 function bodyMC(q, sv){
-  const c = S.cur;
+  const c = S.cur, pics = q.options.every(o => orgKeys(o));
   return `<div class="choices">${q.options.map((o,i) => {
     const out = !sv && c.elim.includes(i), right = sv && i === q.a;
-    return `<button class="choice${out ? " out" : ""}${right ? " right" : ""}" data-act="choose" data-i="${i}" ${out || sv ? "disabled" : ""}>${o}</button>`;
+    return `<button class="choice${pics ? " pic" : ""}${out ? " out" : ""}${right ? " right" : ""}" data-act="choose" data-i="${i}" ${out || sv ? "disabled" : ""}>${pics ? `${oicons(o)}<span>${o}</span>` : o}</button>`;
   }).join("")}</div>`;
 }
 function bodyMatch(q, sv){
@@ -1756,7 +1811,7 @@ function bodyMatch(q, sv){
   }).join("");
   const R = q.order.map(i => {
     const p = q.pairs[i], d = sv || m.includes(i), sel = !!(c.msel && c.msel.side === "R" && c.msel.i === i);
-    return `<button class="mitem${d ? " done" : ""}${sel ? " sel" : ""}" data-act="mpick" data-i="${i}" ${d ? "disabled" : ""} aria-pressed="${sel}">${ic("flask")} ${p.org}</button>`;
+    return `<button class="mitem${d ? " done" : ""}${sel ? " sel" : ""}" data-act="mpick" data-i="${i}" ${d ? "disabled" : ""} aria-pressed="${sel}">${oicons(p.org, "sm") || ic("flask")}<span>${p.org}</span></button>`;
   }).join("");
   return `<p class="howto">Pick a job, then pick the bottle it belongs on.</p>
     <div class="match"><div class="col"><p class="colhead">Jobs</p>${L}</div><div class="col"><p class="colhead">Bottles</p>${R}</div></div>`;
