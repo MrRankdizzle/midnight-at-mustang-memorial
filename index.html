@@ -1798,6 +1798,8 @@ function orgKeys(text){
 }
 const oicon = (k, cls) => `<span class="oic${cls ? " " + cls : ""}" aria-hidden="true"><svg viewBox="0 0 48 48">${OICONS[k]}</svg></span>`;
 const oicons = (text, cls) => (orgKeys(text) || []).map(k => oicon(k, cls)).join("");
+/* No organelle pictures in the Specimen Vault: there, students must identify structures from the diagram alone. */
+const orgIconsOn = () => S.room !== 0;
 
 /* ======================= CENTRIOLE MITOSIS ANIMATION ======================= */
 const MITO = [
@@ -2004,7 +2006,7 @@ function lockHTML(r, big){
 
 /* --- question bodies --- */
 function bodyMC(q, sv){
-  const c = S.cur, pics = q.options.every(o => orgKeys(o));
+  const c = S.cur, pics = orgIconsOn() && q.options.every(o => orgKeys(o));
   return `<div class="choices">${q.options.map((o,i) => {
     const out = !sv && c.elim.includes(i), right = sv && i === q.a;
     return `<button class="choice${pics ? " pic" : ""}${out ? " out" : ""}${right ? " right" : ""}" data-act="choose" data-i="${i}" ${out || sv ? "disabled" : ""}>${pics ? `${oicons(o)}<span>${o}</span>` : o}</button>`;
@@ -2018,7 +2020,7 @@ function bodyMatch(q, sv){
   }).join("");
   const R = q.order.map(i => {
     const p = q.pairs[i], d = sv || m.includes(i), sel = !!(c.msel && c.msel.side === "R" && c.msel.i === i);
-    return `<button class="mitem${d ? " done" : ""}${sel ? " sel" : ""}" data-act="mpick" data-i="${i}" ${d ? "disabled" : ""} aria-pressed="${sel}">${oicons(p.org, "sm") || ic("flask")}<span>${p.org}</span></button>`;
+    return `<button class="mitem${d ? " done" : ""}${sel ? " sel" : ""}" data-act="mpick" data-i="${i}" ${d ? "disabled" : ""} aria-pressed="${sel}">${(orgIconsOn() && oicons(p.org, "sm")) || ic("flask")}<span>${p.org}</span></button>`;
   }).join("");
   return `<p class="howto">Pick a job, then pick the bottle it belongs on.</p>
     <div class="match"><div class="col"><p class="colhead">Jobs</p>${L}</div><div class="col"><p class="colhead">Bottles</p>${R}</div></div>`;
