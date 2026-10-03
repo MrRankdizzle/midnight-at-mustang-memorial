@@ -143,7 +143,19 @@ h1.flick{animation:flicker 2.6s ease-out 1}
 .lede{font-size:1.2rem;position:relative}
 .how{color:var(--muted)}
 .field{display:grid;gap:6px;margin:24px 0 8px;max-width:460px}
-.field label{font-weight:700}
+.field label,.flabel{font-weight:700}
+.avpick{display:flex;flex-wrap:wrap;gap:6px}
+.avbtn{width:50px;height:50px;padding:0;border-radius:50%;border:3px solid transparent;background:none;cursor:pointer;transition:transform .12s}
+.avbtn:hover{transform:translateY(-2px)}
+.avbtn.on{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.avbtn:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.av{display:block;border-radius:50%;overflow:hidden}
+.avbtn .av{width:100%;height:100%}
+.hud-av{width:1.7em;height:1.7em;margin:-4px 0 -4px -6px}
+.stat-av{display:inline-block;width:1.2em;height:1.2em;vertical-align:-.2em}
+.p-who{display:flex;align-items:center;gap:14px;margin:6px 0 4px}
+.p-who .p-name{margin:0}
+.p-av{width:clamp(72px,11vw,104px);height:clamp(72px,11vw,104px);flex:none;border:3px solid #A7D8F0;box-shadow:0 0 18px rgba(123,175,212,.6)}
 input[type=text],textarea{font:inherit;padding:12px 14px;border-radius:12px;border:1.5px solid var(--line);background:var(--surface);color:var(--ink);width:100%}
 textarea{font-size:.85rem;min-height:84px;font-family:ui-monospace,Menlo,Consolas,monospace}
 .pick-head{font-size:1.9rem;margin:26px 0 4px}
@@ -1123,9 +1135,9 @@ function fresh(keep){
   keep = keep || {};
   return {v:4,screen:"title",name:keep.name || "",nameDraft:keep.name || "",caseId:null,pendingCase:null,seed:0,attempt:keep.attempt || 0,history:keep.history || [],
     started:0,activeMs:0,finished:false,room:0,view:0,prog:[0,0,0,0],intro:[false,false,false,false],unlockSeen:[false,false,false],
-    rec:{},points:0,streak:0,bestStreak:0,hints:0,badges:[],pumpkins:[],sound:!!keep.sound,overlay:null,warn:false,cur:freshCur()};
+    rec:{},points:0,streak:0,bestStreak:0,hints:0,badges:[],pumpkins:[],sound:!!keep.sound,avatar:keep.avatar || 0,overlay:null,warn:false,cur:freshCur()};
 }
-const keepOf = s => ({name:s.name || s.nameDraft, sound:s.sound, history:s.history, attempt:s.attempt});
+const keepOf = s => ({name:s.name || s.nameDraft, sound:s.sound, history:s.history, attempt:s.attempt, avatar:s.avatar});
 function load(){
   try{ const raw = localStorage.getItem(KEY); if(!raw) return null; const j = JSON.parse(raw); if(j && Array.isArray(j.prog)){ const s = Object.assign(fresh(), j); s.cur = Object.assign(freshCur(), j.cur || {}); return s; } }catch(e){}
   return null;
@@ -1704,11 +1716,55 @@ function pumpkinHTML(id, style){
   if(S.pumpkins.includes(id)) return "";
   return `<button class="pumpkin" data-act="pumpkin" data-p="${id}" style="${style}" aria-label="Hidden pumpkin">${ic("pumpkin")}</button>`;
 }
+/* --- doctor avatars: head-and-shoulders portraits, white coat over Carolina blue scrubs --- */
+const AVATARS = [
+  {d:"Doctor with short brown hair", skin:"#F3CDAE", hair:"#6B4226",
+   front:'<path d="M20.5,28 C19,16 27,12.5 33,13 C40,13.5 45,18 43.5,28 C42,22.5 38,20 32,20 C26.5,20 22.5,22.5 20.5,28 Z"/>'},
+  {d:"Doctor with curly hair in two puffs", skin:"#6E4128", hair:"#1E1714",
+   back:'<circle cx="18.5" cy="15.5" r="7.5" stroke="#3A2A22" stroke-width="1.6" stroke-dasharray="2 2"/><circle cx="45.5" cy="15.5" r="7.5" stroke="#3A2A22" stroke-width="1.6" stroke-dasharray="2 2"/>',
+   front:'<path d="M21,26 C20.5,17 26,14 32,14 C38,14 43.5,17 43,26 C40,21.5 36,20 32,20 C28,20 24,21.5 21,26 Z"/>'},
+  {d:"Doctor wearing a hijab", skin:"#C68E5E", hair:"#6E3B6E", hijab:true},
+  {d:"Doctor with long black hair and glasses", skin:"#E9B48F", hair:"#1C1A1F", glasses:true,
+   back:'<path d="M19,28 C18,15 25,11.5 32,11.5 C39,11.5 46,15 45,28 L47,50 L17,50 Z"/>',
+   front:'<path d="M20.5,27 C21,16 29,13 34,13.5 C40,14 44,19 43.5,27 C40,21 34,18.5 28,20.5 C24.5,21.8 22,24 20.5,27 Z"/>'},
+  {d:"Doctor with a short fade and a beard", skin:"#4E2E1C", hair:"#141010",
+   front:'<path d="M21,24.5 C21,15.5 27,13 32,13 C37,13 43,15.5 43,24.5 C40,20 24,20 21,24.5 Z"/><path d="M21.5,29 C22.5,39.5 27.5,42 32,42 C36.5,42 41.5,39.5 42.5,29 C41,35.5 37,37.5 32,37.5 C27,37.5 23,35.5 21.5,29 Z M28,35 q4,-2 8,0 q-4,1.6 -8,0 Z"/>'},
+  {d:"Doctor with curly hair and glasses", skin:"#B5784C", hair:"#2B1B12", glasses:true,
+   front:'<circle cx="22" cy="22" r="4"/><circle cx="25" cy="16.5" r="4.2"/><circle cx="31" cy="14" r="4.4"/><circle cx="37.5" cy="15" r="4.2"/><circle cx="42" cy="20" r="4"/><circle cx="28" cy="19" r="3.5"/><circle cx="35" cy="19" r="3.5"/><circle cx="43" cy="25" r="2.8"/><circle cx="21" cy="26" r="2.8"/>'},
+  {d:"Doctor with red hair in a bun", skin:"#F1C7A3", hair:"#B5532A",
+   back:'<circle cx="32" cy="11" r="6.5"/><path d="M20.5,30 C19,24 20,18 24,15.5 L22.5,36 Z M43.5,30 C45,24 44,18 40,15.5 L41.5,36 Z"/>',
+   front:'<path d="M20.5,27 C20,17 26,14 32,14 C38,14 44,17 43.5,27 C41,21 36.5,19.5 32,19.5 C27.5,19.5 23,21 20.5,27 Z"/>'},
+  {d:"Doctor with locs", skin:"#8C5A3A", hair:"#2A1A10",
+   back:'<rect x="17.5" y="20" width="4.5" height="26" rx="2.2"/><rect x="21" y="18" width="4.5" height="30" rx="2.2"/><rect x="38.5" y="18" width="4.5" height="30" rx="2.2"/><rect x="42" y="20" width="4.5" height="26" rx="2.2"/>',
+   front:'<path d="M20.5,27 C19.5,16 26,12.5 32,12.5 C38,12.5 44.5,16 43.5,27 C41,21 37,19 32,19 C27,19 23,21 20.5,27 Z"/><path d="M24,15 v6 M28,13.5 v6 M32,13 v6 M36,13.5 v6 M40,15 v6" stroke="#4A3020" stroke-width="1"/>'}
+];
+function avatarSVG(i, cls){
+  const A = AVATARS[i] || AVATARS[0], k = A.skin;
+  const coat = `<path d="M5,66 C7,51 17,45.5 32,45.5 C47,45.5 57,51 59,66 Z" fill="#F5F8FB" stroke="#C9D6E2" stroke-width="1"/>
+    <path d="M24.5,46 L32,58 L39.5,46 Z" fill="#7BAFD4"/><path d="M24.5,46 L32,58 L39.5,46" fill="none" stroke="#4B86B4" stroke-width="1"/>
+    <path d="M24,46.5 L29.5,66 M40,46.5 L34.5,66" stroke="#C9D6E2" stroke-width="1.4"/>
+    <path d="M25,45.5 C23.5,53 27.5,57 32,57 C36.5,57 40.5,53 39,45.5" fill="none" stroke="#2E3A48" stroke-width="1.8"/>
+    <path d="M38.2,52 C42,55 44,57.5 44.5,60" fill="none" stroke="#2E3A48" stroke-width="1.8"/><circle cx="44.5" cy="61" r="2.6" fill="#C9D2DC" stroke="#2E3A48" stroke-width="1.3"/>`;
+  const face = A.hijab
+    ? `<path d="M32,11 C19,11 17,23 17.5,33 C18,42 21,49 32,50 C43,49 46,42 46.5,33 C47,23 45,11 32,11 Z" fill="${A.hair}"/><path d="M19,44 C24,49 40,49 45,44 L46,52 C40,55 24,55 18,52 Z" fill="${A.hair}"/><ellipse cx="32" cy="30" rx="9.5" ry="11" fill="${k}"/><path d="M22.5,28 C23,20 27,17.5 32,17.5 C37,17.5 41,20 41.5,28" fill="none" stroke="#5A2E5A" stroke-width="1.2"/>`
+    : `<rect x="27" y="36" width="10" height="11" rx="3" fill="${k}"/><rect x="27" y="40" width="10" height="3" fill="#000" opacity=".12"/>
+       <circle cx="20.8" cy="29.5" r="2.6" fill="${k}"/><circle cx="43.2" cy="29.5" r="2.6" fill="${k}"/><ellipse cx="32" cy="28" rx="11" ry="12.5" fill="${k}"/>`;
+  const eyes = `<circle cx="28" cy="29" r="1.5" fill="#1E2430"/><circle cx="36" cy="29" r="1.5" fill="#1E2430"/><path d="M28.5,34.2 q3.5,3 7,0" fill="none" stroke="#5A2A1E" stroke-width="1.4" stroke-linecap="round"/>`;
+  const glasses = A.glasses ? `<g fill="none" stroke="#2E3A48" stroke-width="1.3"><rect x="24.2" y="26.2" width="7.2" height="5.6" rx="2"/><rect x="32.6" y="26.2" width="7.2" height="5.6" rx="2"/><path d="M31.4,28.4 h1.2"/></g>` : "";
+  return `<svg class="av${cls ? " " + cls : ""}" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" fill="#13294A"/><circle cx="32" cy="26" r="24" fill="#1D3B62"/>
+    <g transform="translate(-4.8,-1.4) scale(1.15)">${A.back ? `<g fill="${A.hair}">${A.back}</g>` : ""}${coat}${face}${A.front ? `<g fill="${A.hair}">${A.front}</g>` : ""}${eyes}${glasses}</g></svg>`;
+}
+const avIdx = () => AVATARS[S.avatar] ? S.avatar : 0;
+function avatarPicker(){
+  return `<div class="field"><span class="flabel" id="av-l">Choose your doctor</span>
+    <div class="avpick" role="radiogroup" aria-labelledby="av-l">${AVATARS.map((A,i) => `<button class="avbtn${avIdx() === i ? " on" : ""}" data-act="avatar" data-i="${i}" role="radio" aria-checked="${avIdx() === i}" aria-label="${A.d}" title="${A.d}">${avatarSVG(i)}</button>`).join("")}</div></div>`;
+}
+
 function topbar(){
   const n = [0,1,2].filter(doneRoom).length, lv = profOf(S.hints);
   return `<header class="topbar"><div class="brand">Mustang Memorial</div>
     <div class="tools">
-      <span class="hud" title="Mustang points">${ic("horse")} <span data-pts>${shownPts.toLocaleString()}</span>${S.streak >= 2 ? ` <span class="streak" title="First-try streak">${ic("flame")}${S.streak}</span>` : ""}
+      <span class="hud" title="Mustang points">${avatarSVG(avIdx(), "hud-av")} <span data-pts>${shownPts.toLocaleString()}</span>${S.streak >= 2 ? ` <span class="streak" title="First-try streak">${ic("flame")}${S.streak}</span>` : ""}
         <span class="hud-sep"></span><span title="Hints used. Your proficiency level is based on hints.">${ic("skull")} ${S.hints} hint${S.hints === 1 ? "" : "s"}</span> <span class="lvchip" title="${PROF[lv].name}">Level ${lv}</span></span>
       <span class="clock"><span class="candle">${ic("candle")}</span> <span data-clock>${clockText()}</span></span>
       <button class="chip" data-act="case">${ic("folder")} Case file ${n}/3</button>
@@ -1744,6 +1800,7 @@ function viewTitle(){
       <p class="how">The chief pathologist locked his notes behind three doors. Beat the challenges inside each room to earn clues, then use the clues to make the diagnosis. Wrong answers never trap you, so keep trying. If you’re truly stuck, Dr. Bones the hospital skeleton can give you a hint, but every hint you use counts toward your final proficiency level.</p>
       ${scaleHTML(0)}
       <div class="field"><label for="nm">Your first and last name</label><input id="nm" type="text" maxlength="60" value="${esc(S.nameDraft)}" placeholder="This goes on your escape poster" autocomplete="name"></div>
+      ${avatarPicker()}
     </div>
     <div>
       <h2 class="pick-head">Choose your patient</h2>
@@ -2024,7 +2081,7 @@ function viewPoster(){
       <div>
         <p class="p-kicker">Mustang Memorial Hospital proudly announces</p>
         <div class="p-title">I Escaped!</div>
-        <div class="p-name">${esc(S.name)}</div>
+        <div class="p-who">${avatarSVG(avIdx(), "p-av")}<div class="p-name">${esc(S.name)}</div></div>
         <p class="p-sub">Solved “${C.title}” and diagnosed ${C.first} with ${C.dxShort}.</p>
         <div class="stamp">Case closed<small>${date}, attempt ${S.attempt}</small></div>
       </div>
@@ -2034,7 +2091,7 @@ function viewPoster(){
       ${skylineSVG()}</div>
     </div>
     <div class="p-stats" style="margin-top:14px">
-      <div class="p-stat"><b>${ic("horse")} ${S.points.toLocaleString()}</b><span>Mustang points</span></div>
+      <div class="p-stat"><b>${avatarSVG(avIdx(), "stat-av")} ${S.points.toLocaleString()}</b><span>Mustang points</span></div>
       <div class="p-stat"><b>${ic("clock")} ${clockText()}</b><span>Escape time (${mins()} min)</span></div>
       <div class="p-stat"><b>${ic("flame")} ${S.bestStreak}</b><span>Best first-try streak</span></div>
       <div class="p-stat"><b>${ic("medal")} ${S.badges.length}/${Object.keys(BADGES).length}</b><span>Badges earned</span></div>
@@ -2269,6 +2326,7 @@ function useHint(){
 function act(a, d){
   const c = S.cur;
   switch(a){
+    case "avatar": S.avatar = +d.i; focusSel = `[data-act="avatar"][data-i="${d.i}"]`; break;
     case "pickcase": S.pendingCase = d.case; S.warn = false; focusSel = `[data-case="${d.case}"]`; break;
     case "start": if(!S.pendingCase){ S.warn = "Pick a patient first, or let the hospital surprise you."; break; } startGame(S.pendingCase); break;
     case "surprise": startGame(pick(CASES).id); break;
