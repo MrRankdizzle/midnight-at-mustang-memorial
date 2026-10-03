@@ -432,7 +432,54 @@ svg.cell{width:100%;height:auto;display:block}
 .bdg.no{opacity:.5}
 .bdg b{display:block}
 
+/* centriole mitosis animation */
+.cell [data-peek]{cursor:pointer}
+.cell [data-peek]:hover{filter:drop-shadow(0 0 4px #FFE08A)}
+.mito-open{margin-top:10px}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.mchips{display:flex;flex-wrap:wrap;gap:6px;list-style:none;padding:0;margin:14px 0 10px}
+.mchips li{font-weight:700;font-size:.92rem;padding:4px 12px;border-radius:999px;border:1.5px solid var(--line);animation:mchip 15s linear var(--d) infinite}
+@keyframes mchip{0%,19.5%{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}20%,100%{background:transparent;border-color:var(--line);color:var(--ink)}}
+.mito-stage{background:radial-gradient(circle at 50% 45%,#18355A 0%,#081322 78%);border-radius:16px;padding:8px;border:1px solid #24466E}
+.mito-stage svg{width:100%;height:auto;display:block}
+.mst{opacity:0;animation:mst 15s linear var(--d) infinite}
+@keyframes mst{0%{opacity:0}2%,18%{opacity:1}20%,100%{opacity:0}}
+.mcaps{display:grid;margin-top:12px}
+.mcaps p{grid-area:1/1;margin:0;font-size:1.05rem;opacity:0;animation:mst 15s linear var(--d) infinite}
+.mito.paused *{animation-play-state:paused !important}
+.mito-anim g{transform-box:view-box}
+.mito-anim .m-cl{animation:m-cl 15s ease-in-out var(--d) infinite}
+@keyframes m-cl{0%,3%{transform:translate(112px,-62px)}13%,100%{transform:none}}
+.mito-anim .m-cr{animation:m-cr 15s ease-in-out var(--d) infinite}
+@keyframes m-cr{0%,3%{transform:translate(-112px,-62px)}13%,100%{transform:none}}
+.mito-anim .m-in{animation:m-in 15s linear var(--d) infinite}
+@keyframes m-in{0%,9%{opacity:0}16%,100%{opacity:1}}
+.mito-anim .m-out{animation:m-out 15s linear var(--d) infinite}
+@keyframes m-out{0%,3%{opacity:1}12%,100%{opacity:0}}
+.mito-anim .m-grow-l,.mito-anim .m-grow-r{animation:m-grow 15s ease-out var(--d) infinite}
+@keyframes m-grow{0%,2%{transform:scale(.12)}12%,100%{transform:none}}
+.mito-anim .m-pull-l,.mito-anim .m-pull-r{animation:m-pull 15s ease-in-out var(--d) infinite}
+@keyframes m-pull{0%,3%{transform:scaleX(2.15)}16%,100%{transform:none}}
+.m-grow-l,.m-pull-l{transform-origin:48px 100px}
+.m-grow-r,.m-pull-r{transform-origin:272px 100px}
+.mito-anim .m-go-l{animation:m-go-l 15s ease-in-out var(--d) infinite}
+@keyframes m-go-l{0%,3%{transform:translateX(60px)}16%,100%{transform:none}}
+.mito-anim .m-go-r{animation:m-go-r 15s ease-in-out var(--d) infinite}
+@keyframes m-go-r{0%,3%{transform:translateX(-60px)}16%,100%{transform:none}}
+.mito-anim .m-apart-l{animation:m-apart-l 15s ease-out var(--d) infinite}
+@keyframes m-apart-l{0%,2%{transform:translateX(12px)}12%,100%{transform:none}}
+.mito-anim .m-apart-r{animation:m-apart-r 15s ease-out var(--d) infinite}
+@keyframes m-apart-r{0%,2%{transform:translateX(-12px)}12%,100%{transform:none}}
+.mito-anim .m-pulse{animation:m-pulse 15s ease-in-out var(--d) infinite}
+@keyframes m-pulse{0%,9%{opacity:0}12%{opacity:1}15%{opacity:.3}18%{opacity:1}20%,100%{opacity:0}}
+.mito-static{display:none;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-top:14px}
+.mito-static figure{margin:0}
+.mito-static figcaption{margin-top:6px;font-size:1rem}
+.mito-static .m-out{display:none}
+
 @media (prefers-reduced-motion: reduce){
+  .mito-anim{display:none}
+  .mito-static{display:grid}
   *,*::before,*::after{animation:none !important;transition:none !important}
   .bat,.confetti,.lightning,.spider,.ghost,.spark,.floatpts{display:none !important}
   .vault-msg,.unlock .clue{opacity:1}
@@ -670,6 +717,8 @@ const ICONS = {
   link:'<path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/>',
   check:'<path d="M4.5 12.5l5 5 10-11"/>',
   x:'<path d="M6 6l12 12M18 6L6 18"/>',
+  play:'<path d="M8 5.5v13l10.5-6.5z"/>',
+  pause:'<path d="M9 5.5v13M15 5.5v13"/>',
   camera:'<path d="M3.5 8h3.5l2-3h6l2 3h3.5v11.5h-17z"/><circle cx="12" cy="13.5" r="3.5"/>',
   star:'<path fill="currentColor" stroke="none" d="M12 2.8l2.7 5.9 6.4.7-4.8 4.4 1.4 6.4L12 17l-5.7 3.2 1.4-6.4-4.8-4.4 6.4-.7z"/>',
   heart:'<path fill="currentColor" stroke="none" d="M12 20.5s-8-4.9-8-10.6A4.3 4.3 0 0 1 12 7.5a4.3 4.3 0 0 1 8 2.4c0 5.7-8 10.6-8 10.6z"/>',
@@ -1080,7 +1129,7 @@ let S = load() || fresh();
 if(S.started && !CASE_BY[S.caseId]) S = fresh(keepOf(S));
 let GAME = S.started ? buildGame(S.seed, S.caseId) : null;
 S.screen = "title"; S.overlay = null; S.warn = false;
-let sheetPop = false, focusSel = null, fx = null, enterFx = false, titleShown = false, shownPts = S.points, lastPt = {x:window.innerWidth/2, y:window.innerHeight/2};
+let sheetPop = false, focusSel = null, mitoBack = null, fx = null, enterFx = false, titleShown = false, shownPts = S.points, lastPt = {x:window.innerWidth/2, y:window.innerHeight/2};
 
 const esc = s => String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const pick = arr => arr[Math.floor(Math.random()*arr.length)];
@@ -1441,6 +1490,33 @@ const PINS = {
   G:{at:[554,222],lab:[592,282],tx:592,ty:316,an:"middle"},
   H:{at:[249,93],lab:[178,26],tx:200,ty:31,an:"start"}
 };
+/* Nucleus detail (envelope ribosomes, pores, chromatin). Built once from its own fixed seed so it never touches the game's RNG. */
+const NUC_ART = (() => {
+  const cx = 300, cy = 215, rad = a => a*Math.PI/180, f = n => n.toFixed(1);
+  const pores = [0,1,2,3,4,5,6].map(i => 25 + i*360/7);
+  let ribs = "";
+  for(let i = 0; i < 34; i++){
+    const a = i*360/34 + 4;
+    if(pores.some(p => Math.abs(((a - p + 540) % 360) - 180) < 7)) continue;
+    ribs += `<circle cx="${f(cx + 77*Math.cos(rad(a)))}" cy="${f(cy - 77*Math.sin(rad(a)))}" r="2.3" fill="#F4D57A"/>`;
+  }
+  const pore = pores.map(a => `<g transform="translate(${f(cx + 69*Math.cos(rad(a)))},${f(cy - 69*Math.sin(rad(a)))}) rotate(${f(-a)})"><rect x="-6" y="-3.2" width="12" height="6.4" fill="#3B2858"/><path d="M-4.5,-3.6h9M-4.5,3.6h9" stroke="#B48BE0" stroke-width="1.6" stroke-linecap="round"/></g>`).join("");
+  const R = mulberry32(1031), cols = ["#B79BE0","#9F83CC","#C9B3EE","#8E72BE"];
+  let chrom = "";
+  for(let i = 0; i < 60; i++){
+    const r0 = 60*Math.sqrt(R()), t0 = R()*360;
+    let x = cx + r0*Math.cos(rad(t0)), y = cy + r0*Math.sin(rad(t0)), h = R()*360, d = `M${f(x)},${f(y)}`;
+    for(let k = 0; k < 7; k++){
+      h += (R() - .5)*100;
+      if(Math.hypot(x - cx, y - cy) > 52) h = Math.atan2(cy - y, cx - x)*180/Math.PI + (R() - .5)*60;
+      const w = k % 2 ? 38 : -38, qx = x + 7*Math.cos(rad(h + w)), qy = y + 7*Math.sin(rad(h + w));
+      x += 12*Math.cos(rad(h)); y += 12*Math.sin(rad(h));
+      d += ` Q${f(qx)},${f(qy)} ${f(x)},${f(y)}`;
+    }
+    chrom += `<path d="${d}" stroke="${cols[i % 4]}" stroke-width="${f(1.1 + R()*.6)}" stroke-opacity="${f(.55 + R()*.3)}" fill="none" stroke-linecap="round"/>`;
+  }
+  return {ribs, pore, chrom};
+})();
 function arcPath(cx,cy,r,a1,a2){
   const p = a => [cx + r*Math.cos(a*Math.PI/180), cy - r*Math.sin(a*Math.PI/180)];
   const [x1,y1] = p(a1), [x2,y2] = p(a2);
@@ -1450,9 +1526,9 @@ function cellSVG(o){
   const tappable = !!o.tap, found = o.found || [];
   const cls = org => { let c = "org"; if(o.flash === org) c += " flash"; if(found.includes(org)) c += " found"; return c; };
   const ta = () => tappable ? ` tabindex="0" role="button" aria-label="Cell structure"` : "";
-  const g = (org, inner, anim, delay) => `<g class="${cls(org)}" data-org="${org}"${ta()}><g class="${anim || ""}" style="animation-delay:${delay || 0}s">${inner}</g></g>`;
+  const g = (org, inner, anim, delay, extra) => `<g class="${cls(org)}" data-org="${org}"${ta()}${extra || ""}><g class="${anim || ""}" style="animation-delay:${delay || 0}s">${inner}</g></g>`;
   let s = `<svg class="cell${tappable ? " tappable" : ""}${o.armed ? " armed" : ""}" viewBox="-10 0 620 440" role="img" aria-label="Diagram of an animal cell">
-  <defs><radialGradient id="cyto" cx="45%" cy="40%" r="70%"><stop offset="0" stop-color="#25466F"/><stop offset="1" stop-color="#13294A"/></radialGradient></defs>
+  <defs><radialGradient id="cyto" cx="45%" cy="40%" r="70%"><stop offset="0" stop-color="#25466F"/><stop offset="1" stop-color="#13294A"/></radialGradient><clipPath id="nuc-clip"><circle cx="300" cy="215" r="64.5"/></clipPath></defs>
   <path class="${cls("cytoplasm")}" data-org="cytoplasm" d="${MEM}" fill="url(#cyto)"/>`;
   const ribs = [[248,84],[260,96],[238,100],[418,116],[430,128],[104,262],[116,274],[100,282],[536,188],[196,372],[208,384],[540,238]];
   s += g("ribosome", ribs.map(([x,y]) => `<circle cx="${x}" cy="${y}" r="3.2" fill="#F4D57A"/>`).join(""), "jit");
@@ -1468,8 +1544,10 @@ function cellSVG(o){
   s += g("rough-er", rer);
   s += g("nucleus", `<circle cx="300" cy="215" r="72" fill="#3B2858" stroke="#B48BE0" stroke-width="5"/>
     <circle cx="300" cy="215" r="66" fill="none" stroke="#7E5DB0" stroke-width="1.5"/>
-    <path d="M262,190 q10,-12 20,0 t20,4 M268,246 q12,8 22,-2 t22,6 M318,252 q8,-10 18,-2 M250,220 q6,8 14,2" stroke="#6A4E92" stroke-width="2.2" fill="none" stroke-linecap="round"/>
-    <circle cx="322" cy="200" r="22" fill="#150D22" stroke="#6E4C96" stroke-width="2"/>`, "breathe");
+    <g clip-path="url(#nuc-clip)">${NUC_ART.chrom}</g>
+    <circle cx="322" cy="200" r="27" fill="#3B2858"/>
+    <circle cx="322" cy="200" r="22" fill="#150D22" stroke="#8E6CC0" stroke-width="2.5"/>
+    ${NUC_ART.pore}${NUC_ART.ribs}`, "breathe");
   const ser = ["M326,322 q15,-14 30,0 t30,0 t30,0 t30,0","M338,343 q15,-14 30,0 t30,0 t30,0","M322,365 q15,-14 30,0 t30,0 t30,0 t30,0"];
   s += g("smooth-er", `<rect x="316" y="306" width="140" height="74" rx="12" fill="transparent"/>` + ser.map(d => `<path d="${d}" stroke="#6FC1AF" stroke-width="9" fill="none" stroke-linecap="round"/><path d="${d}" stroke="#234640" stroke-width="2.5" fill="none" stroke-linecap="round"/>`).join(""), "sway");
   let golgi = `<ellipse cx="446" cy="180" rx="24" ry="40" fill="transparent"/>`;
@@ -1485,7 +1563,8 @@ function cellSVG(o){
   const lyso = (x,y,dl) => g("lysosome", `<circle cx="${x}" cy="${y}" r="13" fill="#2F4A26" stroke="#A5D46C" stroke-width="3"/><circle cx="${x-4}" cy="${y-3}" r="2" fill="#C9EE97"/><circle cx="${x+4}" cy="${y+1}" r="2" fill="#C9EE97"/><circle cx="${x-1}" cy="${y+5}" r="2" fill="#C9EE97"/>`, "bob", dl);
   s += lyso(118,190,0) + lyso(290,382,-1.5) + lyso(512,262,-3);
   s += g("centrioles", `<rect x="212" y="344" width="28" height="13" rx="4" fill="#E9DDBE" stroke="#FFF4D8" stroke-width="1.5"/><path d="M219,344v13M226,344v13M233,344v13" stroke="#9C8A62" stroke-width="1.5"/>
-    <rect x="244" y="331" width="13" height="28" rx="4" fill="#E9DDBE" stroke="#FFF4D8" stroke-width="1.5"/><path d="M244,338h13M244,345h13M244,352h13" stroke="#9C8A62" stroke-width="1.5"/>`);
+    <rect x="244" y="331" width="13" height="28" rx="4" fill="#E9DDBE" stroke="#FFF4D8" stroke-width="1.5"/><path d="M244,338h13M244,345h13M244,352h13" stroke="#9C8A62" stroke-width="1.5"/>`, "", 0,
+    !tappable && !o.armed ? ` data-peek tabindex="0" role="button" aria-label="Centrioles: watch them in action during cell division"` : "");
   s += `<path d="${MEM}" fill="none" stroke="#A7D8F0" stroke-width="7" pointer-events="none"/><path d="${MEM}" fill="none" stroke="#3F6E9C" stroke-width="2" pointer-events="none"/>`;
   s += `<path class="${cls("membrane")}" data-org="membrane" d="${MEM}" fill="none" stroke="transparent" stroke-width="22" pointer-events="stroke"/>`;
   (o.pins || []).forEach(p => {
@@ -1501,6 +1580,68 @@ function cellSVG(o){
     </g>`;
   });
   return s + `</svg>`;
+}
+
+/* ======================= CENTRIOLE MITOSIS ANIMATION ======================= */
+const MITO = [
+  {name:"Prophase", cap:"The centrioles split into two pairs and move to opposite poles, growing spindle fibers as they go."},
+  {name:"Metaphase", cap:"Spindle fibers from each centriole pair attach to the chromosomes lined up across the middle of the cell."},
+  {name:"Anaphase", cap:"The spindle fibers shorten and pull the sister chromatids apart toward the centrioles at each pole."},
+  {name:"Telophase", cap:"The centrioles wait at the poles as the spindle fibers break down and a new nucleus forms on each side."},
+  {name:"Cytokinesis", cap:"The cell pinches in two, and each new cell ends up with its own pair of centrioles."}
+];
+function mitoStage(i){
+  const C = ["#E88AB0","#F2C46D","#86E2B9"], Y = [66,100,134];
+  const body = `<ellipse cx="160" cy="100" rx="128" ry="80" fill="#1B355A" stroke="#A7D8F0" stroke-width="3"/>`;
+  const pair = (x,y) => `<g transform="translate(${x},${y})"><rect x="-10" y="-3.5" width="12" height="7" rx="2" fill="#E9DDBE" stroke="#FFF4D8"/><rect x="3" y="-9" width="7" height="12" rx="2" fill="#E9DDBE" stroke="#FFF4D8"/></g>`;
+  const poles = pair(48,100) + pair(272,100);
+  const fib = (x1,y1,x2,y2) => `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#A7D8F0" stroke-width="1.3" stroke-opacity=".65"/>`;
+  const aster = (x,y) => [0,45,90,135,180,225,270,315].map(a => { const c = Math.cos(a*Math.PI/180), s = Math.sin(a*Math.PI/180); return fib((x+8*c).toFixed(1),(y+8*s).toFixed(1),(x+17*c).toFixed(1),(y+17*s).toFixed(1)); }).join("");
+  const xchr = (x,y,c,rot) => `<g transform="translate(${x},${y}) rotate(${rot || 0})" stroke="${c}" stroke-width="4" stroke-linecap="round" fill="none"><path d="M-4,-11 Q2,0 -4,11"/><path d="M4,-11 Q-2,0 4,11"/></g>`;
+  const chrd = (x,y,c,dir) => `<path d="M${x+7*dir},${y-10} Q${x-dir},${y} ${x+7*dir},${y+10}" stroke="${c}" stroke-width="4" stroke-linecap="round" fill="none"/>`;
+  const fan = (px,x) => Y.map(y => fib(px,100,x,y)).join("");
+  if(i === 0) return body + `<circle cx="160" cy="100" r="46" fill="rgba(59,40,88,.55)" stroke="#B48BE0" stroke-width="2.5" stroke-dasharray="7 6"/>`
+    + xchr(144,86,C[0],25) + xchr(178,98,C[1],-35) + xchr(156,120,C[2],70)
+    + `<g class="m-in">${aster(48,100)}${aster(272,100)}${fib(48,100,100,72)}${fib(48,100,100,128)}${fib(272,100,220,72)}${fib(272,100,220,128)}</g>`
+    + `<g class="m-cl">${pair(48,100)}</g><g class="m-cr">${pair(272,100)}</g>`;
+  if(i === 1) return body + `<g class="m-grow-l">${fan(48,156)}</g><g class="m-grow-r">${fan(272,164)}</g>` + aster(48,100) + aster(272,100)
+    + Y.map((y,k) => xchr(160,y,C[k])).join("") + poles;
+  if(i === 2) return body + `<g class="m-pull-l">${fan(48,100)}</g><g class="m-pull-r">${fan(272,220)}</g>` + aster(48,100) + aster(272,100)
+    + `<g class="m-go-l">${Y.map((y,k) => chrd(100,y,C[k],1)).join("")}</g><g class="m-go-r">${Y.map((y,k) => chrd(220,y,C[k],-1)).join("")}</g>` + poles;
+  const nuc = (x, cls) => `<circle${cls ? ` class="${cls}"` : ""} cx="${x}" cy="100" r="28" fill="rgba(59,40,88,.55)" stroke="#B48BE0" stroke-width="2.5"/>`;
+  if(i === 3) return `<g class="m-out">${body}</g><path class="m-in" d="M160,52 C200,20 288,22 288,100 C288,178 200,180 160,148 C120,180 32,178 32,100 C32,22 120,20 160,52 Z" fill="#1B355A" stroke="#A7D8F0" stroke-width="3"/>`
+    + `<g class="m-out">${fan(48,96)}${fan(272,224)}</g>`
+    + `<circle cx="96" cy="100" r="28" fill="none" stroke="#B48BE0" stroke-width="2" stroke-dasharray="6 5"/><circle cx="224" cy="100" r="28" fill="none" stroke="#B48BE0" stroke-width="2" stroke-dasharray="6 5"/>`
+    + `<g class="m-in">${nuc(96)}${nuc(224)}</g>`
+    + [86,100,114].map((y,k) => chrd(94,y,C[k],1) + chrd(226,y,C[k],-1)).join("") + poles;
+  const kid = (cx, px) => `<ellipse cx="${cx}" cy="100" rx="70" ry="66" fill="#1B355A" stroke="#A7D8F0" stroke-width="3"/>${nuc(cx + (px < cx ? 6 : -6))}
+    <path d="M${cx-14},92 q6,-8 12,0 t12,2 M${cx-12},108 q8,6 14,-2 t10,4" stroke="#B79BE0" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+    <circle class="m-pulse" cx="${px}" cy="100" r="17" fill="none" stroke="#FFE08A" stroke-width="2"/>${pair(px,100)}`;
+  return `<g class="m-apart-l">${kid(86,42)}</g><g class="m-apart-r">${kid(234,278)}</g>`;
+}
+function mitosisHTML(){
+  const d = i => `--d:${i ? -(15 - 3*i) : 0}s`;
+  return `<div class="mito">
+    <p class="menu-note" style="margin-top:6px">Watch an animal cell divide. Keep your eyes on the centrioles, the little pair of barrels at each end of the cell.</p>
+    <div class="mito-anim">
+      <ol class="mchips" aria-hidden="true">${MITO.map((m,i) => `<li style="${d(i)}">${m.name}</li>`).join("")}</ol>
+      <div class="mito-stage"><svg viewBox="0 0 320 200" role="img" aria-label="Animation of an animal cell dividing, showing what the centrioles do in each stage">${MITO.map((m,i) => `<g class="mst" style="${d(i)}">${mitoStage(i)}</g>`).join("")}</svg></div>
+      <div class="mcaps" aria-hidden="true">${MITO.map((m,i) => `<p style="${d(i)}"><b>${m.name}:</b> ${m.cap}</p>`).join("")}</div>
+      <ol class="sr-only">${MITO.map(m => `<li>${m.name}: ${m.cap}</li>`).join("")}</ol>
+      <div class="navrow"><button class="btn small" data-act="mitoplay">${ic("pause")} Pause</button></div>
+    </div>
+    <div class="mito-static">${MITO.map((m,i) => `<figure><div class="mito-stage"><svg viewBox="0 0 320 200" aria-hidden="true">${mitoStage(i)}</svg></div><figcaption><b>${i+1}. ${m.name}:</b> ${m.cap}</figcaption></figure>`).join("")}</div>
+  </div>`;
+}
+function aboutCentrioles(q){
+  const has = s => /centriole/i.test(s || "");
+  if(q.target === "centrioles") return true;
+  if(q.type === "label") return q.pins.some(p => p.target === "centrioles");
+  if(q.type === "mc") return has(q.options[q.a]);
+  if(q.type === "match") return q.pairs.some(p => has(p.org));
+  if(q.type === "connections") return q.groups.some(g => g.items.some(has));
+  if(q.type === "factmyth") return q.items.some(x => has(x.s));
+  return false;
 }
 
 /* ======================= VIEWS ======================= */
@@ -1758,7 +1899,7 @@ function qCard(){
     <p class="prompt" tabindex="-1">${fill(q.prompt)}</p>
     ${qBody(q, sv)}
     <div class="feedback ${c.msgType}" role="status" aria-live="polite">${c.msg}</div>
-    ${sv ? `<div class="explain">${fill(q.explain)}</div>` : hintBlock(q)}
+    ${sv ? `<div class="explain">${fill(q.explain)}${aboutCentrioles(q) ? `<div><button class="btn small quiet mito-open" data-act="mitosis">${ic("microscope")} Watch the centrioles in action</button></div>` : ""}</div>` : hintBlock(q)}
     <div class="navrow">
       ${i > 0 ? `<button class="btn quiet small" data-act="prev">${ic("left")} Previous challenge</button>` : ""}
       ${sv ? `<button class="btn" data-act="next">${nextLabel}</button>` : ""}
@@ -1901,6 +2042,8 @@ function viewOverlay(){
       <div class="set-row"><b>${ic("search")} Text size</b>${seg("size", [["md","Normal"],["lg","Large"],["xl","Extra large"]])}</div>
       <p class="sample">Sample: The mitochondria turn glucose and oxygen into ATP.</p>
     </div>`;
+  } else if(S.overlay === "mitosis"){
+    inner = head("Centrioles in action") + mitosisHTML();
   } else if(S.overlay === "backup"){
     inner = head("Backup code") + `<p class="menu-note">Your progress already saves in this browser. If you switch Chromebooks or clear your browser, copy this code first, then paste it on the new device to pick up where you left off.</p>
       <textarea id="bk-out" readonly>${exportCode()}</textarea>
@@ -1931,6 +2074,10 @@ function render(){
 }
 
 /* ======================= GAME LOGIC ======================= */
+function closeOverlay(){
+  if(S.overlay === "mitosis" && mitoBack) focusSel = mitoBack;
+  S.overlay = null; mitoBack = null;
+}
 function setView(i){ S.view = i; S.cur = freshCur(); focusSel = ".prompt"; enterFx = true; }
 function enterRoom(r){
   if(!(r === 0 || doneRoom(r-1))) return;
@@ -2104,7 +2251,14 @@ function act(a, d){
     case "menu": S.overlay = "menu"; sheetPop = true; focusSel = '[data-act="close"]'; break;
     case "badges": S.overlay = "badges"; sheetPop = true; focusSel = '[data-act="close"]'; break;
     case "backup": S.overlay = "backup"; sheetPop = true; break;
-    case "close": S.overlay = null; break;
+    case "close": closeOverlay(); break;
+    case "mitosis": mitoBack = d.from === "peek" ? "[data-peek]" : '[data-act="mitosis"]'; S.overlay = "mitosis"; sheetPop = true; focusSel = '[data-act="close"]'; break;
+    case "mitoplay": {
+      const m = document.querySelector(".mito"), b = document.querySelector('[data-act="mitoplay"]'); if(!m || !b) return;
+      const paused = m.classList.toggle("paused");
+      b.innerHTML = paused ? `${ic("play")} Play` : `${ic("pause")} Pause`;
+      return;
+    }
     case "sound": PREFS.sound = !PREFS.sound; savePrefs(); if(PREFS.sound){ sfx("toggle"); if(PREFS.amb) startAmb(); } else stopAmb(); break;
     case "setpref": {
       const k = d.k, v = d.v;
@@ -2206,9 +2360,10 @@ document.addEventListener("pointercancel", () => endDrag(null, true));
 
 app.addEventListener("click", e => {
   if(suppressClick) return;
-  if(e.target.matches && e.target.matches("[data-overlay]")){ S.overlay = null; render(); return; }
+  if(e.target.matches && e.target.matches("[data-overlay]")){ closeOverlay(); render(); return; }
   const orgEl = e.target.closest(".cell.tappable [data-org]");
   if(orgEl){ tapOrg(orgEl.getAttribute("data-org")); return; }
+  if(e.target.closest(".cell:not(.tappable) [data-peek]")){ act("mitosis", {from:"peek"}); return; }
   const dropEl = e.target.closest("[data-drop]");
   if(dropEl && S.cur.sel != null){ dropItem(S.cur.sel, dropEl.getAttribute("data-drop")); return; }
   const dragEl = e.target.closest("[data-drag]");
@@ -2221,11 +2376,12 @@ app.addEventListener("input", e => { if(e.target.id === "nm"){ S.nameDraft = e.t
 app.addEventListener("keydown", e => {
   const t = e.target;
   if((e.key === "Enter" || e.key === " ") && t.matches && t.matches(".cell.tappable [data-org]")){ e.preventDefault(); tapOrg(t.getAttribute("data-org")); }
+  else if((e.key === "Enter" || e.key === " ") && t.matches && t.matches(".cell:not(.tappable) [data-peek]")){ e.preventDefault(); act("mitosis", {from:"peek"}); }
   else if((e.key === "Enter" || e.key === " ") && t.matches && t.matches("[data-drop]") && S.cur.sel != null){ e.preventDefault(); dropItem(S.cur.sel, t.getAttribute("data-drop")); }
   else if(e.key === "Enter" && t.id === "nm"){ e.preventDefault(); const c = document.querySelector(".case"); if(c) c.focus(); }
 });
 document.addEventListener("keydown", e => {
-  if(e.key === "Escape" && S.overlay){ S.overlay = null; render(); return; }
+  if(e.key === "Escape" && S.overlay){ closeOverlay(); render(); return; }
   if(S.screen === "room" && !S.overlay && GAME && !isSolved() && curQ() && curQ().type === "unscramble" && !(e.target.matches && e.target.matches("input,textarea"))){
     const q = curQ(), c = S.cur;
     if(e.key === "Backspace"){ c.picked.pop(); render(); e.preventDefault(); return; }
