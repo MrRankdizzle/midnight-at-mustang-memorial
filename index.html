@@ -256,6 +256,15 @@ textarea{font-size:.85rem;min-height:84px;font-family:ui-monospace,Menlo,Consola
 .choice:disabled,.mitem:disabled{cursor:default}
 .choice.out{opacity:.5;text-decoration:line-through;background:transparent;border-color:var(--line)}
 .choice.right{border-color:var(--good);background:var(--good-soft);opacity:1}
+.scope-btn{margin-top:12px}
+.scope-btn .free{font-size:.82rem;font-weight:700;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:1px 8px}
+.scope{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:12px;animation:rise .3s ease-out}
+.scope figure{margin:0}
+.scope figcaption{font-weight:800;margin-bottom:6px}
+.scope-view{background:radial-gradient(circle at 50% 45%,#18355A 0%,#081322 78%);border-radius:14px;padding:6px;border:1px solid #24466E}
+.scope-note{grid-column:1/-1;margin:0;color:var(--muted);font-size:.98rem}
+.cell .dr-move{animation:drmove 6s linear infinite}
+@keyframes drmove{0%{transform:translateX(0);opacity:0}10%,85%{opacity:1}100%{transform:translateX(70px);opacity:0}}
 .choice.pic{display:flex;align-items:center;gap:12px;padding:8px 16px 8px 8px}
 .oic{flex:none;display:inline-grid;place-items:center;width:44px;height:44px;border-radius:10px;background:radial-gradient(circle at 45% 40%,#25466F,#13294A);border:1px solid #2A496D}
 .oic + .oic{margin-left:-6px}
@@ -1096,7 +1105,7 @@ function buildGame(seed, caseId){
     hint:"Ask what each cell spends its day doing: burning energy, building proteins to send out, digesting things, or making lipids and breaking down toxins.",
     explain:"Energy-hungry cells load up on mitochondria, protein exporters load up on rough ER, digesting cells load up on lysosomes, and cells that make lipids or break down toxins load up on smooth ER."};
   const mk = sample(Object.keys(L3MC).filter(k => k !== bv), 6);
-  const drawer = (k, n) => { const o = L3MC[k]; return mcq(Object.assign({}, o, {prompt:`Drawer ${n} holds ${o.p}`, a:0})); };
+  const drawer = (k, n) => { const o = L3MC[k]; return mcq(Object.assign({}, o, {prompt:`Drawer ${n} holds ${o.p}`, a:0, l3:k})); };
   const room2 = [drawer(mk[0],1), sortQ, drawer(mk[1],3), drawer(mk[2],4), buildQ, drawer(mk[3],6), drawer(mk[4],7), drawer(mk[5],8)];
 
   const C = CASE_BY[caseId] || CASES[0];
@@ -1130,7 +1139,7 @@ const QUIPS_IDLE = ["Stuck? Click me for a hint, but remember, hints count towar
 
 /* ======================= STATE ======================= */
 const KEY = "mustang-memorial-escape-v4";
-function freshCur(){ return {sel:null,elim:[],misses:0,hint:false,ask:false,placed:{},picked:[],found:[],csel:[],fm:{},build:{},wrongRows:[],matchDone:[],msel:null,pos:0,bounce:null,wrongRow:null,msg:"",msgType:"",just:false,bad:false}; }
+function freshCur(){ return {scope:false,sel:null,elim:[],misses:0,hint:false,ask:false,placed:{},picked:[],found:[],csel:[],fm:{},build:{},wrongRows:[],matchDone:[],msel:null,pos:0,bounce:null,wrongRow:null,msg:"",msgType:"",just:false,bad:false}; }
 function fresh(keep){
   keep = keep || {};
   return {v:4,screen:"title",name:keep.name || "",nameDraft:keep.name || "",caseId:null,pendingCase:null,seed:0,attempt:keep.attempt || 0,history:keep.history || [],
@@ -1537,6 +1546,13 @@ const NUC_ART = (() => {
   }
   return {ribs, pore, chrom};
 })();
+/* The nucleus as drawn at (300,215); clip names a clipPath circle of r=64.5 at that same spot. */
+const nucInner = clip => `<circle cx="300" cy="215" r="72" fill="#3B2858" stroke="#B48BE0" stroke-width="5"/>
+    <circle cx="300" cy="215" r="66" fill="none" stroke="#7E5DB0" stroke-width="1.5"/>
+    <g clip-path="url(#${clip})">${NUC_ART.chrom}</g>
+    <circle cx="322" cy="200" r="27" fill="#3B2858"/>
+    <circle cx="322" cy="200" r="22" fill="#150D22" stroke="#8E6CC0" stroke-width="2.5"/>
+    ${NUC_ART.pore}${NUC_ART.ribs}`;
 function arcPath(cx,cy,r,a1,a2){
   const p = a => [cx + r*Math.cos(a*Math.PI/180), cy - r*Math.sin(a*Math.PI/180)];
   const [x1,y1] = p(a1), [x2,y2] = p(a2);
@@ -1562,12 +1578,7 @@ function cellSVG(o){
     }
   });
   s += g("rough-er", rer);
-  s += g("nucleus", `<circle cx="300" cy="215" r="72" fill="#3B2858" stroke="#B48BE0" stroke-width="5"/>
-    <circle cx="300" cy="215" r="66" fill="none" stroke="#7E5DB0" stroke-width="1.5"/>
-    <g clip-path="url(#nuc-clip)">${NUC_ART.chrom}</g>
-    <circle cx="322" cy="200" r="27" fill="#3B2858"/>
-    <circle cx="322" cy="200" r="22" fill="#150D22" stroke="#8E6CC0" stroke-width="2.5"/>
-    ${NUC_ART.pore}${NUC_ART.ribs}`, "breathe");
+  s += g("nucleus", nucInner("nuc-clip"), "breathe");
   const ser = ["M326,322 q15,-14 30,0 t30,0 t30,0 t30,0","M338,343 q15,-14 30,0 t30,0 t30,0","M322,365 q15,-14 30,0 t30,0 t30,0 t30,0"];
   s += g("smooth-er", `<rect x="316" y="306" width="140" height="74" rx="12" fill="transparent"/>` + ser.map(d => `<path d="${d}" stroke="#6FC1AF" stroke-width="9" fill="none" stroke-linecap="round"/><path d="${d}" stroke="#234640" stroke-width="2.5" fill="none" stroke-linecap="round"/>`).join(""), "sway");
   let golgi = `<ellipse cx="446" cy="180" rx="24" ry="40" fill="transparent"/>`;
@@ -1584,7 +1595,7 @@ function cellSVG(o){
   s += lyso(118,190,0) + lyso(290,382,-1.5) + lyso(512,262,-3);
   s += g("centrioles", `<rect x="212" y="344" width="28" height="13" rx="4" fill="#E9DDBE" stroke="#FFF4D8" stroke-width="1.5"/><path d="M219,344v13M226,344v13M233,344v13" stroke="#9C8A62" stroke-width="1.5"/>
     <rect x="244" y="331" width="13" height="28" rx="4" fill="#E9DDBE" stroke="#FFF4D8" stroke-width="1.5"/><path d="M244,338h13M244,345h13M244,352h13" stroke="#9C8A62" stroke-width="1.5"/>`, "", 0,
-    !tappable && !o.armed ? ` data-peek tabindex="0" role="button" aria-label="Centrioles: watch them in action during cell division"` : "");
+    !tappable && !o.armed && !o.plain ? ` data-peek tabindex="0" role="button" aria-label="Centrioles: watch them in action during cell division"` : "");
   s += `<path d="${MEM}" fill="none" stroke="#A7D8F0" stroke-width="7" pointer-events="none"/><path d="${MEM}" fill="none" stroke="#3F6E9C" stroke-width="2" pointer-events="none"/>`;
   s += `<path class="${cls("membrane")}" data-org="membrane" d="${MEM}" fill="none" stroke="transparent" stroke-width="22" pointer-events="stroke"/>`;
   (o.pins || []).forEach(p => {
@@ -1600,6 +1611,145 @@ function cellSVG(o){
     </g>`;
   });
   return s + `</svg>`;
+}
+
+/* ======================= COLD ROOM MICROSCOPE DRAWINGS ======================= */
+/* Unlabeled "this drawer's cell" drawings, in the Level 1 cell's style, keyed by L3MC key. */
+const DRAW = (() => {
+  const f = n => (+n).toFixed(1);
+  const outline = d => `<path d="${d}" fill="none" stroke="#A7D8F0" stroke-width="7"/><path d="${d}" fill="none" stroke="#3F6E9C" stroke-width="2"/>`;
+  const body = d => `<path d="${d}" fill="url(#dr-cyto)"/>`;
+  const nuc = (x, y, sc) => `<g transform="translate(${f(x - 300*sc)},${f(y - 215*sc)}) scale(${sc})">${nucInner("dr-nuc")}</g>`;
+  const flatNuc = (x, y, rx, ry) => `<ellipse cx="${x}" cy="${y}" rx="${rx}" ry="${ry}" fill="#3B2858" stroke="#B48BE0" stroke-width="3"/><path d="M${x-rx*.6},${y} q${rx*.2},-${ry*.5} ${rx*.4},0 t${rx*.4},0 t${rx*.4},0" stroke="#9F83CC" stroke-width="1.4" fill="none"/>`;
+  const mito = (x, y, rot, sc) => `<g transform="translate(${x},${y}) rotate(${rot || 0}) scale(${sc || 1})"><ellipse rx="34" ry="17" fill="#C85A44" stroke="#F09A80" stroke-width="3"/><path d="M-25,0 l5,-9 l5,18 l5,-18 l5,18 l5,-18 l5,18 l5,-18 l5,18 l5,-18 l5,9" stroke="#F8C9B0" stroke-width="2" fill="none" stroke-linejoin="round"/></g>`;
+  const lyso = (x, y, sc) => `<g transform="translate(${x},${y}) scale(${sc || 1})"><circle r="13" fill="#2F4A26" stroke="#A5D46C" stroke-width="3"/><circle cx="-4" cy="-3" r="2" fill="#C9EE97"/><circle cx="4" cy="1" r="2" fill="#C9EE97"/><circle cx="-1" cy="5" r="2" fill="#C9EE97"/></g>`;
+  const ves = (x, y, r, core) => `<circle cx="${x}" cy="${y}" r="${r}" fill="rgba(242,165,65,.28)" stroke="#F2A541" stroke-width="2.5"/>${core ? `<circle cx="${x}" cy="${y}" r="${f(r*.45)}" fill="#F2A541"/>` : ""}`;
+  const rib = (x, y) => `<circle cx="${f(x)}" cy="${f(y)}" r="3.2" fill="#F4D57A"/>`;
+  const serTube = (x, y, n) => { const d = `M${x},${y} q15,-14 30,0` + " t30,0".repeat(n - 1); return `<path d="${d}" stroke="#6FC1AF" stroke-width="9" fill="none" stroke-linecap="round"/><path d="${d}" stroke="#234640" stroke-width="2.5" fill="none" stroke-linecap="round"/>`; };
+  const rerArc = (cx, cy, r, a1, a2) => {
+    const d = arcPath(cx, cy, r, a1, a2);
+    let o = `<path d="${d}" stroke="#E07C9C" stroke-width="8" fill="none" stroke-linecap="round"/><path d="${d}" stroke="#4A2E4F" stroke-width="2" fill="none" stroke-linecap="round"/>`;
+    const step = Math.max(4, 900 / r) * .9;
+    for(let a = a1 + step/2; a <= a2 - step/3; a += step) [r - 6.5, r + 6.5].forEach(rr => { o += `<circle cx="${f(cx + rr*Math.cos(a*Math.PI/180))}" cy="${f(cy - rr*Math.sin(a*Math.PI/180))}" r="2.3" fill="#F4D57A"/>`; });
+    return o;
+  };
+  const golgi = (x, y, sc) => { let o = ""; for(let i = 0; i < 5; i++){ const gx = -10 + i*9, y1 = -34 + i*4, y2 = 34 - i*4, d = `M${gx},${y1} Q${gx-24},0 ${gx},${y2}`; o += `<path d="${d}" stroke="#F2A541" stroke-width="6.5" fill="none" stroke-linecap="round"/><path d="${d}" stroke="#4A3218" stroke-width="1.6" fill="none" stroke-linecap="round"/>`; } return `<g transform="translate(${x},${y}) scale(${sc})">${o}</g>`; };
+  const column = (x, w, top, bot) => `M${x},${bot} L${x},${top + 10} Q${x},${top} ${x + 10},${top} L${x + w - 10},${top} Q${x + w},${top} ${x + w},${top + 10} L${x + w},${bot} Z`;
+
+  const D = {};
+  D.liver = () => {
+    let s = body(MEM) + `<g clip-path="url(#dr-mem)">`;
+    [88,112,136,160,184,208,232,256,280,304,328,352].forEach((y, i) => { s += serTube(i % 2 ? 300 : 286, y, i < 2 || i > 10 ? 6 : 8); });
+    [[120,330,5],[118,356,5],[140,382,4],[150,100,4],[140,76,4]].forEach(([x,y,n]) => s += serTube(x, y, n));
+    s += `</g>` + nuc(190, 215, .8) + mito(98, 215, 90, .8) + rerArc(190, 215, 86, 95, 140);
+    return s + outline(MEM);
+  };
+  D.adrenal = () => {
+    let s = body(MEM) + `<g clip-path="url(#dr-mem)">`;
+    [[110,120,4],[96,150,5],[90,180,4],[92,250,4],[100,280,5],[118,310,4],[150,340,4],[180,368,5],[160,80,4],[210,62,4],[370,70,4],[380,100,5],[400,130,5],[410,160,4],[420,250,4],[400,280,4],[380,310,5],[360,340,5],[330,370,4]].forEach(([x,y,n]) => s += serTube(x, y, n));
+    s += `</g>` + nuc(300, 215, .7);
+    [[480,190,16],[505,240,12],[470,290,14],[230,330,13],[150,215,15],[250,100,12],[455,110,10]].forEach(([x,y,r]) => s += `<circle cx="${x}" cy="${y}" r="${r}" fill="rgba(246,231,176,.55)" stroke="#E8D49A" stroke-width="2"/>`);
+    s += mito(200, 160, -30, .7) + mito(420, 205, 80, .7) + mito(280, 320, 10, .7);
+    return s + outline(MEM);
+  };
+  D.cardiac = () => {
+    const d = "M30,140 Q30,110 60,110 L470,110 L520,70 Q545,52 560,74 Q572,92 552,108 L530,124 Q570,126 570,160 L570,300 Q570,330 540,330 L60,330 Q30,330 30,300 Z";
+    let s = body(d);
+    for(let x = 50; x < 560; x += 18) s += `<path d="M${x},116 V324" stroke="rgba(167,216,240,.12)" stroke-width="7"/>`;
+    s += nuc(300, 220, .42);
+    [148,186,254,292].forEach((y, r) => { for(let x = 72 + (r % 2)*24; x < 545; x += 50){ if(Math.abs(x - 300) < 52 && Math.abs(y - 220) < 52) continue; s += mito(x, y, r % 2 ? 6 : -6, .62); } });
+    s += mito(532, 90, -38, .5);
+    return s + outline(d);
+  };
+  D.plasma = () => {
+    const d = "M300,40 C450,40 560,120 560,220 C560,320 450,400 300,400 C150,400 40,320 40,220 C40,120 150,40 300,40 Z";
+    let s = body(d) + `<clipPath id="dr-plasma"><path d="M300,52 C440,52 548,126 548,220 C548,314 440,388 300,388 C160,388 52,314 52,220 C52,126 160,52 300,52 Z"/></clipPath><g clip-path="url(#dr-plasma)">`;
+    for(let r = 96; r <= 470; r += 26) s += rerArc(118, 220, r, -80, 80);
+    s += `</g>` + nuc(118, 220, .78) + mito(250, 70, 20, .55) + mito(260, 372, -20, .55);
+    return s + outline(d);
+  };
+  D.beta = () => {
+    let s = body(MEM) + nuc(170, 225, .72) + golgi(330, 215, 1.9) + rerArc(170, 225, 90, 120, 240) + mito(200, 340, 15, .7) + mito(250, 95, -10, .7);
+    const spots = [[-70,.87],[-55,.88],[-40,.89],[-25,.9],[-10,.9],[5,.9],[20,.89],[35,.88],[50,.87],[65,.86],[80,.86],[-58,.76],[-30,.79],[0,.8],[28,.78],[55,.76]];
+    spots.forEach(([a,k], i) => s += ves(f(307 + 247*k*Math.cos(a*Math.PI/180)), f(220 - 188*k*Math.sin(a*Math.PI/180)), 9 + (i % 3), true));
+    [[400,170],[410,250],[390,300],[420,130]].forEach(([x,y]) => s += ves(x, y, 8, true));
+    return s + outline(MEM);
+  };
+  D.macrophage = () => {
+    const d = "M92,232 C70,162 118,112 168,122 C188,72 258,62 290,92 C330,62 400,70 420,108 C452,98 474,118 482,138 C510,140 560,148 586,166 C594,172 588,184 578,182 C556,178 530,176 510,182 C502,194 502,210 510,222 C530,228 556,226 580,222 C590,222 594,234 586,240 C560,256 520,262 500,274 C508,322 470,368 410,360 C390,400 320,410 290,382 C250,410 180,402 170,362 C122,372 80,332 100,292 C72,282 66,252 92,232 Z";
+    let s = body(d) + nuc(220, 235, .62);
+    [[150,170],[300,150],[360,120],[400,200],[330,300],[260,330],[160,300],[420,300],[130,240],[300,210],[460,240],[200,120]].forEach(([x,y],i) => s += lyso(x, y, i % 3 ? 1 : 1.2));
+    s += `<circle cx="420" cy="250" r="26" fill="rgba(242,165,65,.18)" stroke="#F2A541" stroke-width="2.5"/><rect x="404" y="242" width="32" height="15" rx="7" fill="#D9A441" stroke="#8A6418" stroke-width="2" transform="rotate(-25 420 250)"/>` + lyso(448, 228, .9);
+    s += `<rect x="518" y="190" width="66" height="22" rx="11" fill="#D9A441" stroke="#8A6418" stroke-width="2.5"/><path d="M584,196 q8,-7 16,0 M584,206 q9,6 18,-1" stroke="#D9A441" stroke-width="2" fill="none"/>`;
+    s += mito(250, 120, 30, .6) + mito(350, 350, -15, .6);
+    return s + outline(d);
+  };
+  D.trachea = () => {
+    let s = "";
+    [60,220,380].forEach(x => {
+      const d = column(x, 160, 150, 410);
+      s += body(d) + flatNuc(x + 80, 350, 38, 26) + mito(x + 50, 195, 80, .45) + mito(x + 110, 200, 100, .45) + mito(x + 80, 250, 0, .45);
+      for(let cx = x + 10; cx <= x + 150; cx += 11) s += `<path d="M${cx},148 q-7,-16 1,-32 t-1,-34" stroke="#DFF2FC" stroke-width="2.4" fill="none" stroke-linecap="round"/>`;
+      s += outline(d);
+    });
+    return s;
+  };
+  D.intestine = () => {
+    let s = "";
+    [60,220,380].forEach(x => {
+      const d = column(x, 160, 150, 410);
+      s += body(d);
+      for(let mx = x + 6; mx <= x + 148; mx += 11) s += `<path d="M${mx},152 V96 a3.5,3.5 0 0 1 7,0 V152" fill="#25466F" stroke="#A7D8F0" stroke-width="2.5"/>`;
+      s += flatNuc(x + 80, 345, 36, 26) + mito(x + 55, 220, 70, .45) + mito(x + 110, 260, 110, .45) + ves(x + 80, 200, 8);
+      s += outline(d);
+    });
+    return s;
+  };
+  D.sperm = () => {
+    const head = "M40,220 C40,180 80,160 130,166 C170,172 190,196 190,220 C190,244 170,268 130,274 C80,280 40,260 40,220 Z";
+    let s = `<path d="M330,220 C370,180 410,260 450,220 S530,180 570,220 S600,240 610,232" stroke="#DFF2FC" stroke-width="6" fill="none" stroke-linecap="round"/>`;
+    s += `<rect x="186" y="204" width="150" height="32" rx="14" fill="url(#dr-cyto)" stroke="#A7D8F0" stroke-width="3"/>`;
+    for(let x = 198; x <= 324; x += 14) s += `<ellipse cx="${x}" cy="220" rx="7" ry="13" fill="#C85A44" stroke="#F09A80" stroke-width="2"/><path d="M${x-3},214 l3,4 l-3,4 l3,4" stroke="#F8C9B0" stroke-width="1.2" fill="none"/>`;
+    s += body(head) + `<ellipse cx="122" cy="220" rx="62" ry="44" fill="#3B2858" stroke="#B48BE0" stroke-width="3"/><path d="M84,206 q10,-8 20,0 t20,2 M88,232 q12,8 22,-2 t22,4" stroke="#9F83CC" stroke-width="1.6" fill="none"/>`;
+    s += `<path d="M58,190 C70,168 110,160 140,166" stroke="#F2A541" stroke-width="5" fill="none" stroke-linecap="round" opacity=".8"/>` + outline(head);
+    return s;
+  };
+  D.rbc = () => {
+    let s = `<circle cx="165" cy="220" r="128" fill="#C83A4A" stroke="#F09A9F" stroke-width="5"/><circle cx="165" cy="220" r="88" fill="none" stroke="rgba(255,255,255,.08)" stroke-width="34"/><circle cx="165" cy="220" r="58" fill="#E26F7B"/>`;
+    s += `<path d="M330,220 C330,180 362,182 392,192 C422,202 488,202 518,192 C548,182 580,180 580,220 C580,260 548,258 518,248 C488,238 422,238 392,248 C362,258 330,260 330,220 Z" fill="#C83A4A" stroke="#F09A9F" stroke-width="5"/>`;
+    return s;
+  };
+  D.skeletal = () => {
+    const d = "M-10,140 L610,140 L610,300 L-10,300 Z";
+    let s = body(d);
+    for(let x = -6; x < 610; x += 22) s += `<rect x="${x}" y="146" width="10" height="148" fill="rgba(167,216,240,.13)"/>`;
+    for(let y = 170; y <= 270; y += 25) s += `<path d="M-10,${y} H610" stroke="rgba(10,24,40,.35)" stroke-width="2"/>`;
+    [40,160,280,400,520].forEach(x => s += flatNuc(x, 152, 30, 8));
+    [100,220,340,460,580].forEach(x => s += flatNuc(x, 288, 30, 8));
+    [[120,208],[330,232],[470,206],[230,258]].forEach(([x,y]) => s += mito(x, y, 0, .4));
+    s += `<path d="M-10,140 H610 M-10,300 H610" stroke="#A7D8F0" stroke-width="7"/><path d="M-10,140 H610 M-10,300 H610" stroke="#3F6E9C" stroke-width="2"/>`;
+    return s;
+  };
+  D.neuron = () => {
+    const d = "M70,170 L20,120 Q12,108 26,108 L90,150 C100,130 120,120 140,120 L150,60 Q154,46 162,60 L170,124 C200,132 220,150 228,176 L280,150 Q296,144 292,160 L236,200 L610,200 L610,232 L236,232 C224,268 196,300 150,304 L136,372 Q132,386 124,372 L120,300 C96,292 80,276 72,256 L18,282 Q4,286 10,272 L66,232 C60,212 62,190 70,170 Z";
+    let s = body(d) + nuc(148, 210, .52) + golgi(205, 250, .7) + mito(110, 150, 30, .4) + rerArc(148, 210, 54, 40, 140);
+    s += `<path d="M236,210 H610 M236,222 H610" stroke="#A7D8F0" stroke-width="1.6" stroke-dasharray="10 4" opacity=".7"/>`;
+    [[270,210,0],[360,222,-1.2],[450,210,-2.4],[540,222,-3.6],[320,210,-4.8]].forEach(([x,y,dl]) => s += `<g class="dr-move" style="animation-delay:${dl}s">${ves(x, y, 6)}</g>`);
+    s += mito(420, 216, 0, .25);
+    return s + outline(d);
+  };
+  return D;
+})();
+function drawerSVG(k){
+  const fn = DRAW[k]; if(!fn) return "";
+  return `<svg class="cell" viewBox="-10 0 620 440" role="img" aria-label="Drawing of this drawer’s cell, with no labels">
+    <defs><radialGradient id="dr-cyto" cx="45%" cy="40%" r="70%"><stop offset="0" stop-color="#25466F"/><stop offset="1" stop-color="#13294A"/></radialGradient><clipPath id="dr-nuc"><circle cx="300" cy="215" r="64.5"/></clipPath><clipPath id="dr-mem"><path d="${MEM}"/></clipPath></defs>${fn()}</svg>`;
+}
+function scopeHTML(k){
+  return `<div class="scope">
+    <figure><figcaption>Typical cell</figcaption><div class="scope-view">${cellSVG({plain:true})}</div></figure>
+    <figure><figcaption>This drawer’s cell</figcaption><div class="scope-view">${drawerSVG(k)}</div></figure>
+    <p class="scope-note">No labels here. Compare the two cells: what does this one have a lot more (or less) of, and what job would that help with?</p></div>`;
 }
 
 /* ======================= ORGANELLE MINI-ICONS ======================= */
@@ -2009,6 +2159,7 @@ function qCard(){
     <div class="qtop"><div class="dots" aria-label="Challenges in this room">${dots}</div><span class="qtype">${ic(tIc)} ${tTxt}</span></div>
     <p class="qcount">Challenge ${i+1} of ${qs.length}${sv && !c.just ? " (solved, reviewing)" : ""}</p>
     <p class="prompt" tabindex="-1">${fill(q.prompt)}</p>
+    ${q.l3 && DRAW[q.l3] ? `<button class="btn quiet small scope-btn" data-act="scope" aria-expanded="${c.scope}">${ic("microscope")} ${c.scope ? "Hide the microscope view" : "Look under the microscope"} <span class="free">free, not a hint</span></button>${c.scope ? scopeHTML(q.l3) : ""}` : ""}
     ${qBody(q, sv)}
     <div class="feedback ${c.msgType}" role="status" aria-live="polite">${c.msg}</div>
     ${sv ? `<div class="explain">${fill(q.explain)}${aboutCentrioles(q) ? `<div><button class="btn small quiet mito-open" data-act="mitosis">${ic("microscope")} Watch the centrioles in action</button></div>` : ""}</div>` : hintBlock(q)}
@@ -2326,6 +2477,7 @@ function useHint(){
 function act(a, d){
   const c = S.cur;
   switch(a){
+    case "scope": c.scope = !c.scope; focusSel = '[data-act="scope"]'; break;
     case "avatar": S.avatar = +d.i; focusSel = `[data-act="avatar"][data-i="${d.i}"]`; break;
     case "pickcase": S.pendingCase = d.case; S.warn = false; focusSel = `[data-case="${d.case}"]`; break;
     case "start": if(!S.pendingCase){ S.warn = "Pick a patient first, or let the hospital surprise you."; break; } startGame(S.pendingCase); break;
