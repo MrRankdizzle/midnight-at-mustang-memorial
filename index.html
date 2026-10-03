@@ -126,6 +126,10 @@ p{margin:0 0 .8em}
 .streak{display:inline-block;color:#E8833A;animation:flame .5s ease-in-out infinite alternate}
 @keyframes flame{to{transform:scale(1.18) rotate(-6deg)}}
 .clock{font-variant-numeric:tabular-nums;color:var(--muted);padding:0 4px}
+.clock-p{display:none;margin-left:6px;font-size:.78rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;border:1px solid var(--line);border-radius:999px;padding:0 7px}
+.clock.paused .clock-p{display:inline-block}
+.clock.paused [data-clock],.clock.paused .candle{opacity:.55}
+.clock.paused .candle,.clock.paused .candle .cflame{animation-play-state:paused}
 .candle{display:inline-block;animation:candle 1.4s ease-in-out infinite alternate}
 @keyframes candle{50%{transform:skewX(-6deg) scaleY(.94)}to{transform:skewX(4deg)}}
 
@@ -1280,10 +1284,27 @@ setInterval(() => {
 }, 200);
 
 /* ======================= TIMER ======================= */
+/* Active time only: inside a room (or Room 13), tab visible, no overlay open, and some input in the last 3 minutes. */
+const IDLE_MS = 3*60000;
+let lastInput = performance.now(), lastTick = performance.now(), sinceSave = 0;
+const clockRunning = () => !!(S.started && !S.finished && S.screen === "room" && !S.overlay && document.visibilityState === "visible" && performance.now() - lastInput < IDLE_MS);
+function updateClock(){
+  const c = document.querySelector("[data-clock]"); if(!c) return;
+  c.textContent = clockText();
+  const box = c.closest(".clock"), run = clockRunning();
+  box.classList.toggle("paused", !run);
+  box.title = run ? "Night-shift clock (counts only while you work in a room)" : "Clock paused";
+}
 setInterval(() => {
-  if(S.started && !S.finished && document.visibilityState === "visible"){ S.activeMs += 5000; save(); }
-  const c = document.querySelector("[data-clock]"); if(c) c.textContent = clockText();
-}, 5000);
+  const now = performance.now(), dt = Math.min(now - lastTick, 2000); lastTick = now;
+  if(clockRunning()){
+    S.activeMs += dt; sinceSave += dt;
+    if(sinceSave >= 5000){ sinceSave = 0; save(); }
+  }
+  updateClock();
+}, 1000);
+["pointerdown","keydown"].forEach(t => document.addEventListener(t, () => { const was = clockRunning(); lastInput = performance.now(); if(!was) setTimeout(updateClock, 0); }, true));
+document.addEventListener("visibilitychange", () => { lastTick = performance.now(); updateClock(); });
 function mins(){ return Math.max(1, Math.round(S.activeMs/60000)); }
 function clockText(){
   const m = Math.floor(S.activeMs/60000), total = 23*60 + m, h = Math.floor(total/60) % 24, mm = String(total % 60).padStart(2,"0");
@@ -1918,7 +1939,7 @@ function topbar(){
     <div class="tools">
       <span class="hud" title="Mustang points">${avatarSVG(avIdx(), "hud-av")} <span data-pts>${shownPts.toLocaleString()}</span>${S.streak >= 2 ? ` <span class="streak" title="First-try streak">${ic("flame")}${S.streak}</span>` : ""}
         <span class="hud-sep"></span><span title="Hints used. Your proficiency level is based on hints.">${ic("skull")} ${S.hints} hint${S.hints === 1 ? "" : "s"}</span> <span class="lvchip" title="${PROF[lv].name}">Level ${lv}</span></span>
-      <span class="clock"><span class="candle">${ic("candle")}</span> <span data-clock>${clockText()}</span></span>
+      <span class="clock${clockRunning() ? "" : " paused"}"><span class="candle">${ic("candle")}</span> <span data-clock>${clockText()}</span><span class="clock-p">paused</span></span>
       <button class="chip" data-act="case">${ic("folder")} Case file ${n}/3</button>
       <button class="chip" data-act="sound" aria-label="${PREFS.sound ? "Turn sound off" : "Turn sound on"}" title="${PREFS.sound ? "Sound on" : "Sound off"}">${ic(PREFS.sound ? "sound" : "mute")}</button>
       <button class="chip" data-act="menu">${ic("menu")} Menu</button>
