@@ -12,7 +12,7 @@
 :root{
   --bg:#EAF4FB; --surface:#FFFFFF; --surface-2:#DCEBF6; --ink:#0E2238; --muted:#46627E; --line:#B6D0E5;
   --accent:#2F7DB8; --accent-ink:#FFFFFF; --accent-soft:rgba(75,156,211,.16); --sky:#7FC4EA;
-  --good:#1E7A55; --good-soft:rgba(30,122,85,.12); --bad:#B0283F; --bad-soft:rgba(176,40,63,.10);
+  --good:#1E7A55; --good-soft:rgba(30,122,85,.12); --bad:#B0283F; --bad-soft:rgba(176,40,63,.10); --warn:#A3560A;
   --fog:rgba(123,175,212,.28); --tile:#D6E7F4; --bat:#1B3552;
   color-scheme:light;
   box-sizing:border-box;
@@ -23,7 +23,7 @@
   :root:not([data-theme="light"]){
     --bg:#0C1B2E; --surface:#12253D; --surface-2:#1A3150; --ink:#F3F8FD; --muted:#A6C2DC; --line:#2A496D;
     --accent:#7BAFD4; --accent-ink:#0A1828; --accent-soft:rgba(123,175,212,.16); --sky:#A7D8F0;
-    --good:#86E2B9; --good-soft:rgba(134,226,185,.12); --bad:#FF9FB0; --bad-soft:rgba(255,159,176,.12);
+    --good:#86E2B9; --good-soft:rgba(134,226,185,.12); --bad:#FF9FB0; --bad-soft:rgba(255,159,176,.12); --warn:#F2C46D;
     --fog:rgba(123,175,212,.11); --tile:#1A3150; --bat:#4F7BA6;
     color-scheme:dark;
   }
@@ -31,7 +31,7 @@
 :root[data-theme="dark"]{
   --bg:#0C1B2E; --surface:#12253D; --surface-2:#1A3150; --ink:#F3F8FD; --muted:#A6C2DC; --line:#2A496D;
   --accent:#7BAFD4; --accent-ink:#0A1828; --accent-soft:rgba(123,175,212,.16); --sky:#A7D8F0;
-  --good:#86E2B9; --good-soft:rgba(134,226,185,.12); --bad:#FF9FB0; --bad-soft:rgba(255,159,176,.12);
+  --good:#86E2B9; --good-soft:rgba(134,226,185,.12); --bad:#FF9FB0; --bad-soft:rgba(255,159,176,.12); --warn:#F2C46D;
   --fog:rgba(123,175,212,.11); --tile:#1A3150; --bat:#4F7BA6;
   color-scheme:dark;
 }
@@ -128,6 +128,11 @@ p{margin:0 0 .8em}
 .clock{font-variant-numeric:tabular-nums;color:var(--muted);padding:0 4px}
 .clock-p{display:none;margin-left:6px;font-size:.78rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;border:1px solid var(--line);border-radius:999px;padding:0 7px}
 .clock.paused .clock-p{display:inline-block}
+.clock.late{color:var(--warn);font-weight:800}
+.clock.late .clock-p{border-color:var(--warn)}
+.lvchip.capped{background:var(--warn) !important;color:var(--bg) !important}
+.midflick{position:fixed;inset:0;z-index:60;pointer-events:none;background:#020810;opacity:0;animation:midflick 2.4s linear forwards}
+@keyframes midflick{0%{opacity:0}8%{opacity:.75}12%{opacity:.1}20%{opacity:.8}26%{opacity:.2}34%{opacity:.85}60%{opacity:.4}100%{opacity:0}}
 .clock.paused [data-clock],.clock.paused .candle{opacity:.55}
 .clock.paused .candle,.clock.paused .candle .cflame{animation-play-state:paused}
 .candle{display:inline-block;animation:candle 1.4s ease-in-out infinite alternate}
@@ -634,6 +639,9 @@ svg.cell{width:100%;height:auto;display:block}
 .grade-t b{display:block;font:var(--fdw) 2rem/1 var(--fd);color:#FFFFFF}
 .grade-t span{display:block;font:var(--fdw) 1.5rem/1.1 var(--fd);color:#A7D8F0}
 .grade-t small{display:block;margin-top:6px;font-size:.9rem;color:#D9E9F5;max-width:24ch}
+.grade-t .p-when{display:flex;align-items:center;gap:6px;font-weight:700;color:#A7D8F0}
+.grade-t .p-cap{color:#F2C46D;max-width:30ch}
+.grade-t .p-ext{display:inline-flex;align-items:center;gap:6px;width:max-content;max-width:none;font-weight:800;color:#0A1828;background:#F2C46D;border-radius:999px;padding:3px 10px}
 .pscale{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
 .pscale i{font-style:normal;font-size:.78rem;font-weight:700;padding:3px 8px;border-radius:999px;border:1px solid rgba(167,216,240,.5);color:#A7D8F0}
 .pscale i.on{background:#7BAFD4;color:#0A1828;border-color:#FFFFFF}
@@ -1134,6 +1142,11 @@ const BADGES = {
 const PUMPKINS = ["hall","r0","r1","r2","r3"];
 const PROF = {1:{name:"Emerging", range:"6 or more hints"}, 2:{name:"Proficient", range:"4 or 5 hints"}, 3:{name:"Advanced", range:"0 to 3 hints"}};
 const profOf = h => h >= 6 ? 1 : h >= 4 ? 2 : 3;
+/* Midnight cap: once active time reaches 60 minutes (12:00 AM), the best level on that attempt is 2, unless extended time was used. */
+const MIDNIGHT_MS = 60*60000;
+const pastMidnight = () => S.activeMs >= MIDNIGHT_MS;
+const capped = () => pastMidnight() && !S.extUsed;
+const levelFor = h => capped() ? Math.min(profOf(h), 2) : profOf(h);
 
 const RIGHT = ["Correct! A letter flickers to life on the lock.","Correct! Somewhere down the hall, a door creaks open.","Correct! Dr. Bones rattles with approval.","Correct! The blue lamp burns a little brighter."];
 const RIGHT_FINAL = ["Correct! The heart monitor steadies a little.","Correct! Dr. Bones gives a slow, proud nod.","Correct! The lights in Room 13 flicker back on."];
@@ -1148,7 +1161,7 @@ function fresh(keep){
   keep = keep || {};
   return {v:4,screen:"title",name:keep.name || "",nameDraft:keep.name || "",caseId:null,pendingCase:null,seed:0,attempt:keep.attempt || 0,history:keep.history || [],
     started:0,activeMs:0,finished:false,room:0,view:0,prog:[0,0,0,0],intro:[false,false,false,false],unlockSeen:[false,false,false],
-    rec:{},points:0,streak:0,bestStreak:0,hints:0,badges:[],pumpkins:[],sound:!!keep.sound,avatar:keep.avatar || 0,overlay:null,warn:false,cur:freshCur()};
+    rec:{},points:0,streak:0,bestStreak:0,hints:0,badges:[],pumpkins:[],sound:!!keep.sound,avatar:keep.avatar || 0,midnight:false,extUsed:false,overlay:null,warn:false,cur:freshCur()};
 }
 const keepOf = s => ({name:s.name || s.nameDraft, sound:s.sound, history:s.history, attempt:s.attempt, avatar:s.avatar});
 function load(){
@@ -1177,7 +1190,7 @@ const firstName = () => (S.name || "").trim().split(/\s+/)[0] || "intern";
 
 /* ======================= PREFERENCES ======================= */
 const PKEY = "mustang-memorial-prefs";
-let PREFS = {sound:false, amb:false, font:"default", size:"md"};
+let PREFS = {sound:false, amb:false, font:"default", size:"md", ext:false};
 try{ Object.assign(PREFS, JSON.parse(localStorage.getItem(PKEY) || "{}")); }catch(e){}
 function savePrefs(){ try{ localStorage.setItem(PKEY, JSON.stringify(PREFS)); }catch(e){} }
 function applyPrefs(){ const d = document.documentElement; d.dataset.font = PREFS.font; d.dataset.size = PREFS.size; }
@@ -1292,17 +1305,31 @@ function updateClock(){
   const c = document.querySelector("[data-clock]"); if(!c) return;
   c.textContent = clockText();
   const box = c.closest(".clock"), run = clockRunning();
-  box.classList.toggle("paused", !run);
+  box.classList.toggle("paused", !run); box.classList.toggle("late", pastMidnight());
   box.title = run ? "Night-shift clock (counts only while you work in a room)" : "Clock paused";
 }
 setInterval(() => {
   const now = performance.now(), dt = Math.min(now - lastTick, 2000); lastTick = now;
+  syncExt();
   if(clockRunning()){
     S.activeMs += dt; sinceSave += dt;
     if(sinceSave >= 5000){ sinceSave = 0; save(); }
+    if(pastMidnight() && !S.midnight) midnightStrikes();
   }
   updateClock();
 }, 1000);
+/* Extended time (IEP/504) counts for the whole attempt once it is on at any point before finishing. */
+function syncExt(){ if(PREFS.ext && S.started && !S.finished && !S.extUsed){ S.extUsed = true; save(); } }
+function midnightStrikes(){
+  S.midnight = true; save();
+  sfx("bell"); sfx("bell", 1400); sfx("bell", 2800);
+  const fl = document.createElement("div"); fl.className = "midflick"; fl.setAttribute("aria-hidden", "true");
+  document.body.appendChild(fl); setTimeout(() => fl.remove(), 2600);
+  setTimeout(() => bonesSay(S.extUsed
+    ? `Midnight! You have extended time, so keep going at your own pace. ${P().first} is lucky to have you.`
+    : `Midnight! You can still save ${P().first}, but the best you can earn now is Level 2. Try another patient later if you want to aim for Level 3.`, S.extUsed ? "happy" : "sad", 9000), 600);
+  render();
+}
 ["pointerdown","keydown"].forEach(t => document.addEventListener(t, () => { const was = clockRunning(); lastInput = performance.now(); if(!was) setTimeout(updateClock, 0); }, true));
 document.addEventListener("visibilitychange", () => { lastTick = performance.now(); updateClock(); });
 function mins(){ return Math.max(1, Math.round(S.activeMs/60000)); }
@@ -1344,14 +1371,14 @@ function confettiHTML(n){
   return s + `</div>`;
 }
 let bubbleTimer = null;
-function bonesSay(text, mood){
+function bonesSay(text, mood, ms){
   const b = document.getElementById("bones"), bub = document.getElementById("bubble");
   if(!b.classList.contains("on")) return;
   bub.textContent = text; bub.classList.add("show");
   b.classList.remove("talk","sad","happy"); void b.offsetWidth;
   b.classList.add("talk"); if(mood) b.classList.add(mood);
   clearTimeout(bubbleTimer);
-  bubbleTimer = setTimeout(() => { bub.classList.remove("show"); b.classList.remove("talk","sad","happy"); }, 4200);
+  bubbleTimer = setTimeout(() => { bub.classList.remove("show"); b.classList.remove("talk","sad","happy"); }, ms || 4200);
 }
 function award(id){
   if(S.badges.includes(id)) return;
@@ -1934,11 +1961,11 @@ function avatarPicker(){
 }
 
 function topbar(){
-  const n = [0,1,2].filter(doneRoom).length, lv = profOf(S.hints);
+  const n = [0,1,2].filter(doneRoom).length, lv = levelFor(S.hints);
   return `<header class="topbar"><div class="brand">Midnight at Mustang Memorial</div>
     <div class="tools">
       <span class="hud" title="Mustang points">${avatarSVG(avIdx(), "hud-av")} <span data-pts>${shownPts.toLocaleString()}</span>${S.streak >= 2 ? ` <span class="streak" title="First-try streak">${ic("flame")}${S.streak}</span>` : ""}
-        <span class="hud-sep"></span><span title="Hints used. Your proficiency level is based on hints.">${ic("skull")} ${S.hints} hint${S.hints === 1 ? "" : "s"}</span> <span class="lvchip" title="${PROF[lv].name}">Level ${lv}</span></span>
+        <span class="hud-sep"></span><span title="Hints used. Your proficiency level is based on hints.">${ic("skull")} ${S.hints} hint${S.hints === 1 ? "" : "s"}</span> <span class="lvchip${capped() ? " capped" : ""}" title="${PROF[lv].name}${capped() ? ". Capped at Level 2 after midnight" : ""}">Level ${lv}${capped() && profOf(S.hints) === 3 ? " (max)" : ""}</span></span>
       <span class="clock${clockRunning() ? "" : " paused"}"><span class="candle">${ic("candle")}</span> <span data-clock>${clockText()}</span><span class="clock-p">paused</span></span>
       <button class="chip" data-act="case">${ic("folder")} Case file ${n}/3</button>
       <button class="chip" data-act="sound" aria-label="${PREFS.sound ? "Turn sound off" : "Turn sound on"}" title="${PREFS.sound ? "Sound on" : "Sound off"}">${ic(PREFS.sound ? "sound" : "mute")}</button>
@@ -2162,7 +2189,7 @@ function hintBlock(q){
   const c = S.cur;
   if(c.hint) return `<div class="hint" tabindex="-1">${ic("skull")} <strong>Dr. Bones:</strong> ${fill(q.hint)}</div>`;
   if(c.ask){
-    const nh = S.hints + 1, nl = profOf(nh), cl = profOf(S.hints);
+    const nh = S.hints + 1, nl = levelFor(nh), cl = levelFor(S.hints);
     const msg = nl < cl ? `This would be hint ${nh}. It would move you from Level ${cl} (${PROF[cl].name}) to Level ${nl} (${PROF[nl].name}).` : `This would be hint ${nh}. You’d stay on track for Level ${nl} (${PROF[nl].name}).`;
     return `<div class="hintask" role="alertdialog" aria-label="Use a hint?"><p>${ic("skull")} ${msg} Use it?</p><div class="row"><button class="btn small" data-act="hintyes">Use the hint</button><button class="btn quiet small" data-act="hintno">Never mind, I’ll keep trying</button></div></div>`;
   }
@@ -2236,7 +2263,7 @@ function levelData(r){
   return {recs, first: recs.filter(x => !x.miss && x.m === 0 && !x.h).length, hints: recs.filter(x => x.h).length, n: qs.length};
 }
 function viewPoster(){
-  const C = P(), lv = profOf(S.hints);
+  const C = P(), lv = levelFor(S.hints), hintLv = profOf(S.hints);
   const names = ["Level 1: identify organelles","Level 2: organelle jobs","Level 3: specialized cells","Final: diagnosis"];
   const L = [0,1,2,3].map(levelData);
   const struggles = [];
@@ -2261,6 +2288,9 @@ function viewPoster(){
       </div>
       <div><div class="grade">${crestSVG(lv)}<div class="grade-t"><b>Proficiency Level ${lv}</b><span>${PROF[lv].name}</span>
         <small>Earned with ${S.hints} hint${S.hints === 1 ? "" : "s"} from Dr. Bones.</small>
+        <small class="p-when">${ic("clock")} ${pastMidnight() ? "Escaped after midnight" : "Escaped before midnight"}</small>
+        ${capped() && hintLv === 3 ? `<small class="p-cap">That means this attempt is capped at Level 2. Try another patient to aim for Level 3.</small>` : ""}
+        ${S.extUsed ? `<small class="p-ext">${ic("clock")} Extended time used</small>` : ""}
         <div class="pscale">${[1,2,3].map(l => `<i class="${l === lv ? "on" : ""}">L${l}: ${l === 3 ? "0–3" : l === 2 ? "4–5" : "6+"} hints</i>`).join("")}</div></div></div>
       ${skylineSVG()}</div>
     </div>
@@ -2316,12 +2346,13 @@ function viewOverlay(){
         <button class="btn danger" data-act="restart">${ic("restart")} Start completely over</button>
       </div>
       <p class="menu-note">${saveOk ? "Your progress saves automatically in this browser after every move." : "This browser is blocking saving. Use a backup code so you don’t lose progress."}</p>
-      <p class="menu-note">Hints used so far: ${S.hints} (on track for Level ${profOf(S.hints)}: ${PROF[profOf(S.hints)].name}).</p>`;
+      <p class="menu-note">Hints used so far: ${S.hints} (on track for Level ${levelFor(S.hints)}: ${PROF[levelFor(S.hints)].name}${capped() ? ", the most you can earn after midnight" : ""}).</p>`;
   } else if(S.overlay === "settings"){
     const cur = k => PREFS[k] === true ? "1" : PREFS[k] === false ? "0" : String(PREFS[k]);
     const seg = (k, opts) => `<div class="seg wrapseg">${opts.map(([v,l,style]) => `<button class="${cur(k) === v ? "on" : ""}" aria-pressed="${cur(k) === v}" data-act="setpref" data-k="${k}" data-v="${v}" ${style ? `style="${style}"` : ""}>${l}</button>`).join("")}</div>`;
     inner = head("Settings") + `<div class="settings">
       <div class="set-row"><b>${ic("sound")} Sound effects</b>${seg("sound", [["1","On"],["0","Off"]])}</div>
+      <div class="set-row"><b>${ic("clock")} Extended time (IEP or 504)</b>${seg("ext", [["1","On"],["0","Off"]])}<span class="menu-note">Turn this on only if you have extended time in your IEP or 504 plan. Your teacher will check.</span></div>
       <div class="set-row"><b>${ic("ghost")} Spooky wind in the background</b>${seg("amb", [["1","On"],["0","Off"]])}<span class="menu-note">Plays only while sound effects are on.</span></div>
       <div class="set-row"><b>${ic("tag")} Font</b>${seg("font", [["default","Spooky (default)","font-family:'Pirata One',Georgia,serif;font-weight:400;font-size:1.1rem"],["atkinson","Atkinson Hyperlegible","font-family:'Atkinson Hyperlegible',Verdana,sans-serif"],["lexend","Lexend","font-family:Lexend,Verdana,sans-serif"],["system","Plain system font","font-family:system-ui,Arial,sans-serif"]])}
         <span class="menu-note">Atkinson Hyperlegible and Lexend were designed to be easier to read, including for readers with dyslexia or low vision.</span></div>
@@ -2397,7 +2428,7 @@ function solve(){
       S.finished = true; award("closed");
       if(S.activeMs <= 60*60000) award("owl");
       if(S.hints === 0) award("fearless");
-      S.history.push({c:S.caseId, h:S.hints, l:profOf(S.hints), p:S.points, d:new Date().toISOString().slice(0,10)});
+      S.history.push({c:S.caseId, h:S.hints, l:levelFor(S.hints), p:S.points, d:new Date().toISOString().slice(0,10)});
     }
   }
   sfx(r < 3 ? "correct" : "chime"); bonesSay(pick(QUIPS_HAPPY), "happy"); save(); render();
@@ -2480,7 +2511,7 @@ function startGame(caseId){
   S.name = name; S.caseId = caseId; S.started = Date.now(); S.attempt = (S.attempt || 0) + 1;
   S.seed = (Date.now() ^ Math.floor(Math.random()*1e9)) >>> 0;
   GAME = buildGame(S.seed, caseId);
-  S.screen = "hall"; S.warn = false; window.scrollTo(0,0); sfx("bell"); sfx("door", 900);
+  S.screen = "hall"; S.warn = false; window.scrollTo(0,0); sfx("bell"); sfx("door", 900); syncExt();
   setTimeout(() => bonesSay(`Welcome to the night shift, ${firstName()}! Try each challenge on your own first.`), 700);
 }
 function doHint(){
@@ -2550,8 +2581,8 @@ function act(a, d){
     case "sound": PREFS.sound = !PREFS.sound; savePrefs(); if(PREFS.sound){ sfx("toggle"); if(PREFS.amb) startAmb(); } else stopAmb(); break;
     case "setpref": {
       const k = d.k, v = d.v;
-      if(k === "sound" || k === "amb") PREFS[k] = v === "1"; else PREFS[k] = v;
-      savePrefs(); applyPrefs();
+      if(k === "sound" || k === "amb" || k === "ext") PREFS[k] = v === "1"; else PREFS[k] = v;
+      savePrefs(); applyPrefs(); syncExt();
       if(PREFS.sound && PREFS.amb) startAmb(); else stopAmb();
       if(k === "sound" && PREFS.sound) sfx("toggle");
       focusSel = `[data-k="${k}"][data-v="${v}"]`; break;
