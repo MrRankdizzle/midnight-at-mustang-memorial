@@ -6,7 +6,7 @@ Plain HTML/CSS/JS, no framework, no build step. Deployed on Vercel from GitHub.
 ## Structure (all inside index.html)
 - Content pools: STRUCT, RIDDLES, MATCHP, ORDERS, CONNS, FMPOOL, L3MC, SORTCATS, BUILDS, CASES
 - buildGame(seed, caseId) assembles each student's randomized game from those pools
-- Proficiency: profOf(hints) → 5+ hints = Level 1, 3–4 = Level 2, 0–2 = Level 3
+- Proficiency: profOf(hints) → 6+ hints = Level 1, 4–5 = Level 2, 0–3 = Level 3
 - Icons are inline SVG in ICONS; no emoji anywhere in the UI
 - Sounds are synthesized with Web Audio in SFX; no audio files
 - Accessibility settings (font, text size, sound) are stored separately from game progress

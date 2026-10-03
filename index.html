@@ -1099,8 +1099,8 @@ const BADGES = {
   closed:{i:"stetho", n:"Case Closed", d:"Made the final diagnosis"}
 };
 const PUMPKINS = ["hall","r0","r1","r2","r3"];
-const PROF = {1:{name:"Emerging", range:"5 or more hints"}, 2:{name:"Proficient", range:"3 or 4 hints"}, 3:{name:"Advanced", range:"0 to 2 hints"}};
-const profOf = h => h >= 5 ? 1 : h >= 3 ? 2 : 3;
+const PROF = {1:{name:"Emerging", range:"6 or more hints"}, 2:{name:"Proficient", range:"4 or 5 hints"}, 3:{name:"Advanced", range:"0 to 3 hints"}};
+const profOf = h => h >= 6 ? 1 : h >= 4 ? 2 : 3;
 
 const RIGHT = ["Correct! A letter flickers to life on the lock.","Correct! Somewhere down the hall, a door creaks open.","Correct! Dr. Bones rattles with approval.","Correct! The blue lamp burns a little brighter."];
 const RIGHT_FINAL = ["Correct! The heart monitor steadies a little.","Correct! Dr. Bones gives a slow, proud nod.","Correct! The lights in Room 13 flicker back on."];
@@ -1975,7 +1975,7 @@ function viewPoster(){
       </div>
       <div><div class="grade">${crestSVG(lv)}<div class="grade-t"><b>Proficiency Level ${lv}</b><span>${PROF[lv].name}</span>
         <small>Earned with ${S.hints} hint${S.hints === 1 ? "" : "s"} from Dr. Bones.</small>
-        <div class="pscale">${[1,2,3].map(l => `<i class="${l === lv ? "on" : ""}">L${l}: ${l === 3 ? "0–2" : l === 2 ? "3–4" : "5+"} hints</i>`).join("")}</div></div></div>
+        <div class="pscale">${[1,2,3].map(l => `<i class="${l === lv ? "on" : ""}">L${l}: ${l === 3 ? "0–3" : l === 2 ? "4–5" : "6+"} hints</i>`).join("")}</div></div></div>
       ${skylineSVG()}</div>
     </div>
     <div class="p-stats" style="margin-top:14px">
