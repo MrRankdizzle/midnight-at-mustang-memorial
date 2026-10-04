@@ -453,6 +453,9 @@ svg.cell{width:100%;height:auto;display:block}
 .p-badge{font-size:.85rem;font-weight:700;background:rgba(123,175,212,.2);border:1px solid #7BAFD4;border-radius:999px;padding:4px 10px}
 .p-foot{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-top:14px;color:#A7D8F0;font-size:.95rem}
 .p-foot b{font:var(--fdw) 1.5rem var(--fd);color:#FFFFFF}
+.p-foot .go{display:inline-flex;align-items:center;gap:10px}
+.p-foot .mustang-badge{display:inline-grid;place-items:center;background:#EAF4FB;border:2px solid #A7D8F0;border-radius:12px;padding:3px 8px;box-shadow:0 0 14px rgba(123,175,212,.45)}
+.p-foot .mustang-badge img{display:block;height:1.6em;width:auto}
 .dxcard{max-width:940px;margin:18px auto 0}
 
 /* overlay */
@@ -2314,7 +2317,7 @@ function viewPoster(){
         <div class="p-badges">${S.badges.map(b => `<span class="p-badge">${ic(BADGES[b].i)} ${BADGES[b].n}</span>`).join("") || `<span class="p-badge">No badges yet</span>`}</div>
       </div>
     </div>
-    <div class="p-foot"><span>${ic("camera")} Screenshot this poster and send it to your teacher.</span><b>Go Mustangs! ${ic("horse")}</b></div>
+    <div class="p-foot"><span>${ic("camera")} Screenshot this poster and send it to your teacher.</span><b class="go">Go Mustangs! <span class="mustang-badge"><img src="mustang.png" alt="Little Chute Mustangs logo" width="80" height="52"></span></b></div>
   </section>
   <div class="card dxcard"><h3 style="margin:0 0 6px;font-size:1.6rem">About ${C.dxShort}</h3><p style="margin:0">${C.dx}</p></div>
   <div class="row" style="max-width:940px;margin:18px auto 0">

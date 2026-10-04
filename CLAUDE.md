@@ -20,7 +20,7 @@ Plain HTML/CSS/JS, no framework, no build step. Deployed on Vercel from GitHub.
   appending new items to the end of pools, and make bigger content changes
   between units.
 - Keep the Carolina blue / sky blue / white palette and the existing fonts as defaults.
-- Keep everything in the single index.html file.
+- Keep all code in the single index.html file. The only other asset is mustang.png (the school logo), which must stay committed alongside it.
 - Organelle mini-icons on answer options appear only in Level 2 (Old Apothecary) and Room 13. Never show them in Level 1 or Level 3, because they make identification too easy.
 - After any change, check that the page loads without console errors.
 - Show me the planned change before editing, and keep student-facing text
