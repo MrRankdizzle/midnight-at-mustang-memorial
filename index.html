@@ -1846,8 +1846,9 @@ function orgKeys(text){
 }
 const oicon = (k, cls) => `<span class="oic${cls ? " " + cls : ""}" aria-hidden="true"><svg viewBox="0 0 48 48">${OICONS[k]}</svg></span>`;
 const oicons = (text, cls) => (orgKeys(text) || []).map(k => oicon(k, cls)).join("");
-/* No organelle pictures in the Specimen Vault: there, students must identify structures from the diagram alone. */
-const orgIconsOn = () => S.room !== 0;
+/* Organelle pictures only in the Apothecary (room 1) and Room 13 (room 3). Levels 1 and 3 ask students to
+   identify structures and connect structure to function on their own, so the pictures would make it too easy. */
+const orgIconsOn = () => S.room === 1 || S.room === 3;
 
 /* ======================= CENTRIOLE MITOSIS ANIMATION ======================= */
 const MITO = [
