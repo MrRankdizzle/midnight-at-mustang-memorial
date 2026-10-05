@@ -518,14 +518,13 @@ svg.cell{width:100%;height:auto;display:block}
 .mito-static figcaption{margin-top:6px;font-size:1rem}
 .mito-static .m-out{display:none}
 
-@media (prefers-reduced-motion: reduce){
-  .mito-anim{display:none}
-  .mito-static{display:grid}
-  *,*::before,*::after{animation:none !important;transition:none !important}
-  .bat,.confetti,.lightning,.spider,.ghost,.spark,.floatpts{display:none !important}
-  .vault-msg,.unlock .clue{opacity:1}
-  .leaf{display:none}
-}
+/* Reduce motion is a game setting (PREFS.motion), not the device's prefers-reduced-motion, so animations run by default. */
+:root[data-motion="reduced"] .mito-anim{display:none}
+:root[data-motion="reduced"] .mito-static{display:grid}
+:root[data-motion="reduced"],:root[data-motion="reduced"] *,:root[data-motion="reduced"] *::before,:root[data-motion="reduced"] *::after{animation:none !important;transition:none !important}
+:root[data-motion="reduced"] :is(.bat,.confetti,.lightning,.spider,.ghost,.spark,.floatpts){display:none !important}
+:root[data-motion="reduced"] :is(.vault-msg,.unlock .clue){opacity:1}
+:root[data-motion="reduced"] .leaf{display:none}
 
 /* ---------- v4: vector icons ---------- */
 .ic{width:1.15em;height:1.15em;vertical-align:-.2em;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:none}
@@ -1193,10 +1192,10 @@ const firstName = () => (S.name || "").trim().split(/\s+/)[0] || "intern";
 
 /* ======================= PREFERENCES ======================= */
 const PKEY = "mustang-memorial-prefs";
-let PREFS = {sound:false, amb:false, font:"default", size:"md", ext:false};
+let PREFS = {sound:false, amb:false, font:"default", size:"md", ext:false, motion:"full"};
 try{ Object.assign(PREFS, JSON.parse(localStorage.getItem(PKEY) || "{}")); }catch(e){}
 function savePrefs(){ try{ localStorage.setItem(PKEY, JSON.stringify(PREFS)); }catch(e){} }
-function applyPrefs(){ const d = document.documentElement; d.dataset.font = PREFS.font; d.dataset.size = PREFS.size; }
+function applyPrefs(){ const d = document.documentElement; d.dataset.font = PREFS.font; d.dataset.size = PREFS.size; d.dataset.motion = PREFS.motion; }
 applyPrefs();
 
 /* ======================= SOUND (all synthesized, no files) ======================= */
@@ -2344,7 +2343,7 @@ function viewOverlay(){
         ${S.screen !== "hall" ? `<button class="btn quiet" data-act="hall">${ic("door")} Go to the hallway</button>` : ""}
         ${S.finished ? `<button class="btn quiet" data-act="poster">${ic("trophy")} See my escape poster</button>` : ""}
         <button class="btn quiet" data-act="badges">${ic("medal")} Badges and pumpkins</button>
-        <button class="btn quiet" data-act="settings">${ic("gear")} Settings: sound, fonts, and text size</button>
+        <button class="btn quiet" data-act="settings">${ic("gear")} Settings: sound, motion, fonts, and text size</button>
         <button class="btn quiet" data-act="backup">${ic("save")} Backup code (move to another device)</button>
         <button class="btn quiet" data-act="totitle">${ic("home")} Back to the title screen</button>
         <button class="btn danger" data-act="restart">${ic("restart")} Start completely over</button>
@@ -2358,6 +2357,7 @@ function viewOverlay(){
       <div class="set-row"><b>${ic("sound")} Sound effects</b>${seg("sound", [["1","On"],["0","Off"]])}</div>
       <div class="set-row"><b>${ic("clock")} Extended time (IEP or 504)</b>${seg("ext", [["1","On"],["0","Off"]])}<span class="menu-note">Turn this on only if you have extended time in your IEP or 504 plan. Your teacher will check.</span></div>
       <div class="set-row"><b>${ic("ghost")} Spooky wind in the background</b>${seg("amb", [["1","On"],["0","Off"]])}<span class="menu-note">Plays only while sound effects are on.</span></div>
+      <div class="set-row"><b>${ic("pause")} Reduce motion</b>${seg("motion", [["reduced","On"],["full","Off"]])}<span class="menu-note">Turn this on if moving effects are distracting or make you feel dizzy.</span></div>
       <div class="set-row"><b>${ic("tag")} Font</b>${seg("font", [["default","Spooky (default)","font-family:'Pirata One',Georgia,serif;font-weight:400;font-size:1.1rem"],["atkinson","Atkinson Hyperlegible","font-family:'Atkinson Hyperlegible',Verdana,sans-serif"],["lexend","Lexend","font-family:Lexend,Verdana,sans-serif"],["system","Plain system font","font-family:system-ui,Arial,sans-serif"]])}
         <span class="menu-note">Atkinson Hyperlegible and Lexend were designed to be easier to read, including for readers with dyslexia or low vision.</span></div>
       <div class="set-row"><b>${ic("search")} Text size</b>${seg("size", [["md","Normal"],["lg","Large"],["xl","Extra large"]])}</div>
