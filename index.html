@@ -1192,6 +1192,7 @@ const firstName = () => (S.name || "").trim().split(/\s+/)[0] || "intern";
 
 /* ======================= PREFERENCES ======================= */
 const PKEY = "mustang-memorial-prefs";
+/* ext:true means the Time limit setting is Off (extended time). It defaults to false so the midnight cap is on. */
 let PREFS = {sound:false, amb:false, font:"default", size:"md", ext:false, motion:"full"};
 try{ Object.assign(PREFS, JSON.parse(localStorage.getItem(PKEY) || "{}")); }catch(e){}
 function savePrefs(){ try{ localStorage.setItem(PKEY, JSON.stringify(PREFS)); }catch(e){} }
@@ -2355,7 +2356,7 @@ function viewOverlay(){
     const seg = (k, opts) => `<div class="seg wrapseg">${opts.map(([v,l,style]) => `<button class="${cur(k) === v ? "on" : ""}" aria-pressed="${cur(k) === v}" data-act="setpref" data-k="${k}" data-v="${v}" ${style ? `style="${style}"` : ""}>${l}</button>`).join("")}</div>`;
     inner = head("Settings") + `<div class="settings">
       <div class="set-row"><b>${ic("sound")} Sound effects</b>${seg("sound", [["1","On"],["0","Off"]])}</div>
-      <div class="set-row"><b>${ic("clock")} Extended time (IEP or 504)</b>${seg("ext", [["1","On"],["0","Off"]])}<span class="menu-note">Turn this on only if you have extended time in your IEP or 504 plan. Your teacher will check.</span></div>
+      <div class="set-row"><b>${ic("clock")} Time limit</b>${seg("ext", [["0","On"],["1","Off"]])}<span class="menu-note">Only turn this off if you have extended time in your IEP or 504 plan. Your teacher will check.</span></div>
       <div class="set-row"><b>${ic("ghost")} Spooky wind in the background</b>${seg("amb", [["1","On"],["0","Off"]])}<span class="menu-note">Plays only while sound effects are on.</span></div>
       <div class="set-row"><b>${ic("pause")} Reduce motion</b>${seg("motion", [["reduced","On"],["full","Off"]])}<span class="menu-note">Turn this on if moving effects are distracting or make you feel dizzy.</span></div>
       <div class="set-row"><b>${ic("tag")} Font</b>${seg("font", [["default","Spooky (default)","font-family:'Pirata One',Georgia,serif;font-weight:400;font-size:1.1rem"],["atkinson","Atkinson Hyperlegible","font-family:'Atkinson Hyperlegible',Verdana,sans-serif"],["lexend","Lexend","font-family:Lexend,Verdana,sans-serif"],["system","Plain system font","font-family:system-ui,Arial,sans-serif"]])}
