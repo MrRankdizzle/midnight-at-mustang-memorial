@@ -7,7 +7,7 @@ Plain HTML/CSS/JS, no framework, no build step. Deployed on Vercel from GitHub.
 - Content pools: STRUCT, RIDDLES, MATCHP, ORDERS, CONNS, FMPOOL, L3MC, SORTCATS, BUILDS, CASES
 - buildGame(seed, caseId) assembles each student's randomized game from those pools
 - Proficiency: levelFor() = the lowest of three limits (accuracy, hints, midnight cap). Level 0 is NE (Not Enough Evidence), below Level 1; show it as "NE", never "Level 0" (lvName/lvFull).
-  - Accuracy: first-try correct answers / total answers. 70%+ = Level 3, 50–69.99% = Level 2, 30–49.99% = Level 1, under 30% = NE. Compared in whole numbers (10c >= 7n) so exactly 70% is Level 3. No answers yet = not limiting.
+  - Accuracy: first-try correct answers / total answers. 80%+ = Level 3, 60–79.99% = Level 2, 40–59.99% = Level 1, under 40% = NE. Compared in whole numbers (10c >= 8n) so exactly 80% is Level 3. No answers yet = not limiting.
   - Answers per challenge (stepsOf): mc, tap, unscramble = 1. Label = 1 per pin, match = 1 per pair, order = 1 per step, sort = 1 per cell, fact or myth = 1 per statement, build = 1 per row (judged on the first "Test my cell" only). Connections = its 3 groups, always counted correct (trial and error is the point).
   - Tracking: S.cur.wm marks missed steps and wmc counts misses charged to steps. solve() stores {m, h, n, c} in S.rec. Records without n/c (older saves) are estimated by recScore as max(0, steps - misses). Misses and hints on an unsolved challenge are kept in S.pend, so leaving and coming back can't reset them.
   - Hints: profOf(hints) → 6+ hints = Level 1, 4–5 = Level 2, 0–3 = Level 3.

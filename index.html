@@ -1217,8 +1217,8 @@ function accuracy(){
   if(GAME) [0,1,2,3].forEach(r => roomQs(r).forEach((q,i) => { const x = S.rec[`${r}-${i}`]; if(x){ const s = recScore(x, q); c += s.c; n += s.n; } }));
   return {c, n, pct: n ? Math.floor(100*c/n) : null};
 }
-/* Whole-number comparisons, so exactly 70% is Level 3. No answers yet means accuracy isn't limiting anything. */
-const accLevel = (c, n) => !n || 10*c >= 7*n ? 3 : 10*c >= 5*n ? 2 : 10*c >= 3*n ? 1 : 0;
+/* Whole-number comparisons, so exactly 80% is Level 3. No answers yet means accuracy isn't limiting anything. */
+const accLevel = (c, n) => !n || 10*c >= 8*n ? 3 : 10*c >= 6*n ? 2 : 10*c >= 4*n ? 1 : 0;
 function limits(h){ const a = accuracy(); return {acc: accLevel(a.c, a.n), hints: profOf(h), time: capped() ? 2 : 3}; }
 /* Final level = the lowest of the accuracy level, the hint level, and the midnight cap. */
 const levelFor = h => { const L = limits(h); return Math.min(L.acc, L.hints, L.time); };
@@ -2063,7 +2063,7 @@ function topbar(){
 function limitsHTML(){
   return `<div class="limits"><p class="limits-lead">Your proficiency level is the <b>lowest</b> of three limits:</p>
     <div class="scale">
-      <div><b>${ic("check")}Accuracy</b><span>70% or more: Level 3. 50–69%: Level 2. 30–49%: Level 1. Under 30%: NE (Not Enough Evidence).</span></div>
+      <div><b>${ic("check")}Accuracy</b><span>80% or more: Level 3. 60–79%: Level 2. 40–59%: Level 1. Under 40%: NE (Not Enough Evidence).</span></div>
       <div><b>${ic("skull")}Hints</b><span>0–3 hints: Level 3. 4–5 hints: Level 2. 6 or more: Level 1.</span></div>
       <div><b>${ic("clock")}Time limit</b><span>If you reach midnight (60 minutes of play), the most you can earn is Level 2.</span></div>
     </div>
