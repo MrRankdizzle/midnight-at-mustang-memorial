@@ -19,6 +19,13 @@ Plain HTML/CSS/JS, no framework, no build step. Deployed on Vercel from GitHub.
   of existing content pools changes questions for students mid-game. Prefer
   appending new items to the end of pools, and make bigger content changes
   between units.
+- Generator versioning: each game saves the version of buildGame's selection
+  logic it was built with (S.gv, set from GEN_VERSION in startGame). Saves
+  without gv are version 1. When a change would alter how buildGame picks or
+  orders questions, bump GEN_VERSION and put the new logic behind
+  `gv >= N`, leaving the older branches untouched so in-progress games keep
+  their questions. Version 2 picks the Level 1 unscramble word from UNSCR and
+  keeps it out of the other Level 1 challenges.
 - Keep the Carolina blue / sky blue / white palette and the existing fonts as defaults.
 - Keep all code in the single index.html file. The only other asset is mustang.png (the school logo), which must stay committed alongside it.
 - Organelle mini-icons on answer options appear only in Level 2 (Old Apothecary) and Room 13. Never show them in Level 1 or Level 3, because they make identification too easy.

@@ -355,6 +355,8 @@ textarea{font-size:.85rem;min-height:84px;font-family:ui-monospace,Menlo,Consola
 .ltile:hover{transform:translateY(-3px) rotate(-3deg)}
 .ltile:disabled{opacity:.18;cursor:default;transform:none}
 .scr-wrap.wrong .scr-slots{animation:shake .45s}
+/* Words longer than 8 letters split into two even rows instead of wrapping raggedly. */
+.scr-wrap.long .scr-slots,.scr-wrap.long .scr-tiles{display:grid;grid-template-columns:repeat(var(--cols),max-content)}
 
 /* specimen */
 .specimen{position:relative;background:radial-gradient(circle at 50% 45%,#18355A 0%,#081322 78%);border-radius:20px;padding:10px 10px 6px;border:1px solid #24466E;position:sticky;top:12px}
@@ -828,6 +830,16 @@ const STRUCT = {
     pinq:{prompt:"What are the tiny dots floating loose in the cytoplasm at pin H?", distract:["Lysosomes","Vesicles","Centrioles"], hint:"These tiny dots build proteins. Some float free, and others stick to the rough ER.", explain:"Free ribosomes float in the cytoplasm and build proteins the cell keeps for itself. Ribosomes stuck to the rough ER build proteins to ship out.", tag:"Identifying ribosomes"}}
 };
 const TAP_POOL = ["nucleus","golgi","mitochondrion","lysosome","centrioles","rough-er","smooth-er"];
+/* Unscramble words for generator version 2 (keyed like STRUCT). Version 1 games still use STRUCT's word fields. */
+const UNSCR = {
+  nucleus:{pin:"J", word:"NUCLEUS", wdesc:"the large round compartment in the middle of the cell", hint:"It’s the biggest organelle in the cell, and it holds the cell’s DNA.", explain:"The nucleus is the largest organelle. It holds the cell’s DNA inside a double membrane called the nuclear envelope.", tag:"Identifying the nucleus"},
+  nucleolus:{pin:"A", word:"NUCLEOLUS", wdesc:"the dark spot inside the nucleus", hint:"It sits inside the nucleus, and its name means “little nucleus.”", explain:"The nucleolus is a dense region inside the nucleus where ribosomes are assembled.", tag:"Identifying the nucleolus"},
+  mitochondrion:{pin:"K", word:"MITOCHONDRION", wdesc:"one of the bean-shaped organelles with zigzag folds inside", hint:"This is where the cell makes most of its ATP. You need the name for just one of them, not the plural.", explain:"A mitochondrion is bean-shaped with a folded inner membrane. Those folds are called cristae, and they give it more surface area to make ATP.", tag:"Identifying mitochondria"},
+  ribosome:{pin:"H", word:"RIBOSOME", wdesc:"one of the tiny dots floating loose in the cytoplasm", hint:"These tiny dots build proteins. Some float free, and others stick to the rough ER.", explain:"Free ribosomes float in the cytoplasm and build proteins the cell keeps for itself. Ribosomes stuck to the rough ER build proteins to ship out.", tag:"Identifying ribosomes"},
+  lysosome:{pin:"D", word:"LYSOSOME", wdesc:"a small round sac full of specks", hint:"Think of a tiny bag filled with digestive enzymes, drawn as specks inside a round membrane.", explain:"Lysosomes are small, round, membrane-bound sacs filled with digestive enzymes.", tag:"Identifying lysosomes"},
+  centrioles:{pin:"E", word:"CENTRIOLE", wdesc:"one of the two little barrels sitting at right angles to each other", hint:"There are two of them, so you need the name for just one. They help organize cell division.", explain:"Centrioles are a pair of short cylinders set at right angles to each other. They sit near the nucleus and help organize cell division.", tag:"Identifying centrioles"},
+  golgi:{pin:"L", word:"GOLGI", wdesc:"the stack of curved, flattened sacs that looks like a pile of pancakes", ask:"Unscramble the letters to name it (just the first word of its name).", hint:"It’s named after Camillo Golgi, the Italian scientist who first saw it. Its full name ends in “apparatus.”", explain:"The Golgi apparatus is a stack of flattened, curved sacs. Small vesicles bud off its edges carrying finished products.", tag:"Identifying the Golgi apparatus"}
+};
 const IMPOSTORS = [
   {prompt:"Spot the impostor! Which of these would you never find inside one of {first}’s cells?", options:["Chloroplasts","Mitochondria","Ribosomes","Lysosomes"], a:0, hint:"Human cells can’t make their own food from sunlight.", explain:"Chloroplasts carry out photosynthesis. They belong to plant cells, not human cells.", tag:"Telling animal cells from plant cells"},
   {prompt:"Spot the impostor! Which structure belongs to plant cells but not to human cells like {first}’s?", options:["Cell wall","Cell membrane","Nucleus","Golgi apparatus"], a:0, hint:"Human cells are wrapped in a flexible membrane, but nothing rigid outside it.", explain:"Plant cells have a rigid cell wall outside their membrane. Human cells only have the flexible cell membrane, which lets them change shape.", tag:"Telling animal cells from plant cells"},
@@ -1056,8 +1068,10 @@ const ROOMS = [
   outro:"The lock spells it out in glowing blue letters: MUSTANGS. The last drawer slides open on its own, and inside is {found}."}
 ];
 
-/* Build a unique game from a seed */
-function buildGame(seed, caseId){
+/* Build a unique game from a seed. gv is the generator version saved with the game:
+   saves without one (version 1) keep the original selection logic so their questions never change. */
+const GEN_VERSION = 2;
+function buildGame(seed, caseId, gv){
   const R = mulberry32(seed);
   const sh = a => { const b = a.slice(); for(let i = b.length - 1; i > 0; i--){ const j = Math.floor(R() * (i + 1)); [b[i], b[j]] = [b[j], b[i]]; } return b; };
   const sample = (a, k) => sh(a).slice(0, k);
@@ -1065,20 +1079,36 @@ function buildGame(seed, caseId){
   const mcq = (o, a) => { const ans = a == null ? (o.a == null ? 0 : o.a) : a; const perm = sh(o.options.map((_, i) => i)); return Object.assign({}, o, {type:"mc", options: perm.map(i => o.options[i]), a: perm.indexOf(ans)}); };
 
   /* Level 1 */
-  const taps = sample(TAP_POOL, 3);
   const pinKeys = Object.keys(STRUCT).filter(k => STRUCT[k].pin);
-  const pinMC = sample(pinKeys.filter(k => !taps.includes(k)), 2);
-  const uns = pickOne(["vesicle","lysosome","nucleolus","ribosome"].filter(k => !pinMC.includes(k)));
-  const labKeys = sample(pinKeys.filter(k => !pinMC.includes(k) && k !== uns), 4);
+  let taps, pinMC, uns, labKeys, unsQ, guard = 0;
+  if((gv || 1) >= 2){
+    /* Version 2: pick the unscramble word first, then keep it out of every other Level 1 challenge. */
+    uns = pickOne(Object.keys(UNSCR));
+    taps = sample(TAP_POOL.filter(k => k !== uns), 3);
+    pinMC = sample(pinKeys.filter(k => !taps.includes(k) && k !== uns), 2);
+    labKeys = sample(pinKeys.filter(k => !pinMC.includes(k) && k !== uns), 4);
+    const u = UNSCR[uns]; let scr = u.word;
+    while(scr === u.word && guard++ < 20) scr = sh([...u.word]).join("");
+    unsQ = {type:"unscramble", pin:u.pin, target:uns, word:u.word, scr, tag:u.tag,
+      prompt:`Pin ${u.pin} points to ${u.wdesc}. ${u.ask || "Unscramble the letters to name it."} Tap the tiles or type on your keyboard.`,
+      hint:`It’s a ${u.word.length}-letter word that starts with ${u.word[0]}. ${u.hint}`, explain:u.explain};
+  } else {
+    taps = sample(TAP_POOL, 3);
+    pinMC = sample(pinKeys.filter(k => !taps.includes(k)), 2);
+    uns = pickOne(["vesicle","lysosome","nucleolus","ribosome"].filter(k => !pinMC.includes(k)));
+    labKeys = sample(pinKeys.filter(k => !pinMC.includes(k) && k !== uns), 4);
+  }
   const decoys = sample(["Chloroplast","Cell wall","Central vacuole"], 2);
   const labels = sh(labKeys.map(k => STRUCT[k].label).concat(decoys));
   const tapQ = k => Object.assign({type:"tap", target:k}, STRUCT[k].tap);
   const pinQ = k => { const s = STRUCT[k]; return mcq({pin:s.pin, target:k, prompt:s.pinq.prompt, options:[s.label].concat(s.pinq.distract), a:0, hint:s.pinq.hint, explain:s.pinq.explain, tag:s.pinq.tag}); };
-  const us = STRUCT[uns]; let scr = us.word; let guard = 0;
-  while(scr === us.word && guard++ < 20) scr = sh([...us.word]).join("");
-  const unsQ = {type:"unscramble", pin:us.pin, target:uns, word:us.word, scr, tag:us.pinq.tag,
-    prompt:`Pin ${us.pin} points to ${us.wdesc}. Unscramble the letters to name it. Tap the tiles or type on your keyboard.`,
-    hint:`It’s a ${us.word.length}-letter word that starts with ${us.word[0]}. ${us.pinq.hint}`, explain:us.pinq.explain};
+  if(!unsQ){
+    const us = STRUCT[uns]; let scr = us.word;
+    while(scr === us.word && guard++ < 20) scr = sh([...us.word]).join("");
+    unsQ = {type:"unscramble", pin:us.pin, target:uns, word:us.word, scr, tag:us.pinq.tag,
+      prompt:`Pin ${us.pin} points to ${us.wdesc}. Unscramble the letters to name it. Tap the tiles or type on your keyboard.`,
+      hint:`It’s a ${us.word.length}-letter word that starts with ${us.word[0]}. ${us.pinq.hint}`, explain:us.pinq.explain};
+  }
   const labelQ = {type:"label", tag:"Labeling organelles on a diagram",
     prompt:"Four labels fell off the specimen! Drag each label onto the right pin (or tap a label, then tap a pin). Careful: two of these labels belong to plant cells.",
     labels, tray: labels.map((_, i) => i),
@@ -1175,7 +1205,7 @@ function save(){ try{ localStorage.setItem(KEY, JSON.stringify(S)); saveOk = tru
 
 let S = load() || fresh();
 if(S.started && !CASE_BY[S.caseId]) S = fresh(keepOf(S));
-let GAME = S.started ? buildGame(S.seed, S.caseId) : null;
+let GAME = S.started ? buildGame(S.seed, S.caseId, S.gv) : null;
 S.screen = "title"; S.overlay = null; S.warn = false;
 let sheetPop = false, focusSel = null, mitoBack = null, fx = null, enterFx = false, titleShown = false, shownPts = S.points, lastPt = {x:window.innerWidth/2, y:window.innerHeight/2};
 
@@ -1568,7 +1598,10 @@ const PINS = {
   E:{at:[236,348],lab:[150,424],tx:172,ty:429,an:"start"},
   F:{at:[494,150],lab:[575,92],tx:575,ty:62,an:"middle"},
   G:{at:[554,222],lab:[592,282],tx:592,ty:316,an:"middle"},
-  H:{at:[249,93],lab:[178,26],tx:200,ty:31,an:"start"}
+  H:{at:[249,93],lab:[178,26],tx:200,ty:31,an:"start"},
+  J:{at:[284,186],lab:[300,20],tx:322,ty:25,an:"start"},
+  K:{at:[488,318],lab:[582,388],tx:582,ty:423,an:"middle"},
+  L:{at:[434,180],lab:[480,22],tx:502,ty:27,an:"start"}
 };
 /* Nucleus detail (envelope ribosomes, pores, chromatin). Built once from its own fixed seed so it never touches the game's RNG. */
 const NUC_ART = (() => {
@@ -2087,12 +2120,12 @@ function bodyLabel(q, sv){
   return `<div class="tray" aria-label="Labels">${q.tray.filter(i => !used.includes(i)).map(i => dragTile("L" + i, q.labels[i])).join("")}</div>`;
 }
 function bodyUnscramble(q, sv){
-  const c = S.cur, letters = [...q.scr];
+  const c = S.cur, letters = [...q.scr], long = q.word.length > 8 ? ` long" style="--cols:${Math.ceil(q.word.length/2)}` : "";
   const pl = sv ? [...q.word] : c.picked.map(i => letters[i]);
   const slots = [...q.word].map((_,i) => `<span class="scr-slot${pl[i] ? " f" : ""}">${pl[i] || ""}</span>`).join("");
-  if(sv) return `<div class="scr-wrap"><div class="scr-slots">${slots}</div></div>`;
+  if(sv) return `<div class="scr-wrap${long}"><div class="scr-slots">${slots}</div></div>`;
   const tiles = letters.map((ch,i) => `<button class="ltile" data-act="letter" data-i="${i}" ${c.picked.includes(i) ? "disabled" : ""} aria-label="Letter ${ch}">${ch}</button>`).join("");
-  return `<div class="scr-wrap${c.bad ? " wrong" : ""}"><div class="scr-slots" aria-live="polite">${slots}</div><div class="scr-tiles">${tiles}</div>
+  return `<div class="scr-wrap${c.bad ? " wrong" : ""}${long}"><div class="scr-slots" aria-live="polite">${slots}</div><div class="scr-tiles">${tiles}</div>
     <div class="navrow"><button class="btn quiet small" data-act="unletter" ${c.picked.length ? "" : "disabled"}>${ic("left")} Undo letter</button><button class="btn quiet small" data-act="clearletters" ${c.picked.length ? "" : "disabled"}>${ic("x")} Clear</button></div></div>`;
 }
 function bodyOrder(q, sv){
@@ -2515,7 +2548,7 @@ function startGame(caseId){
   if(!/^\S+ \S+/.test(name)){ S.warn = "Please type your first and last name. It goes on your escape poster so your teacher knows it’s yours."; focusSel = "#nm"; return; }
   S.name = name; S.caseId = caseId; S.started = Date.now(); S.attempt = (S.attempt || 0) + 1;
   S.seed = (Date.now() ^ Math.floor(Math.random()*1e9)) >>> 0;
-  GAME = buildGame(S.seed, caseId);
+  S.gv = GEN_VERSION; GAME = buildGame(S.seed, caseId, S.gv);
   S.screen = "hall"; S.warn = false; window.scrollTo(0,0); sfx("bell"); sfx("door", 900); syncExt();
   setTimeout(() => bonesSay(`Welcome to the night shift, ${firstName()}! Try each challenge on your own first.`), 700);
 }
@@ -2621,7 +2654,7 @@ function act(a, d){
         if(!j || !Array.isArray(j.prog) || !CASE_BY[j.caseId] || !j.seed) throw new Error("bad");
         if(!window.confirm("Load this backup? It replaces the progress currently on this device.")) return;
         S = Object.assign(fresh(), j); S.cur = freshCur(); S.overlay = null;
-        GAME = buildGame(S.seed, S.caseId); S.screen = S.finished ? "poster" : "hall"; shownPts = S.points;
+        GAME = buildGame(S.seed, S.caseId, S.gv); S.screen = S.finished ? "poster" : "hall"; shownPts = S.points;
         toast("save", "Backup loaded", `Welcome back, ${S.name}!`);
       }catch(e){ msg.textContent = "That code didn’t work. Make sure you copied the whole thing."; return; }
       break;
