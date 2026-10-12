@@ -538,6 +538,10 @@ svg.cell{width:100%;height:auto;display:block}
 .hud .ic{color:var(--accent)}
 .hud-sep{width:1px;height:1.1em;background:var(--line);margin:0 4px}
 .lvchip{font:800 .8rem var(--fb);background:var(--accent);color:var(--accent-ink);border-radius:999px;padding:2px 8px}
+.hud-lv{display:inline-flex;align-items:center;gap:8px;white-space:nowrap}
+.hud-lv > span{display:inline-flex;align-items:center;gap:4px}
+/* On phones, accuracy, hints, and level get their own line inside the pill. */
+@media (max-width:480px){.hud{flex-wrap:wrap;row-gap:4px;border-radius:18px}.hud .hud-sep{display:none}.hud-lv{flex-basis:100%}}
 .streak .ic{color:#E8833A}
 .candle .cflame{animation:cflame 1.1s ease-in-out infinite alternate;transform-box:fill-box;transform-origin:bottom center}
 @keyframes cflame{to{transform:scaleY(.8) skewX(-8deg)}}
@@ -645,6 +649,7 @@ svg.cell{width:100%;height:auto;display:block}
 .grade-t small{display:block;margin-top:6px;font-size:.9rem;color:#D9E9F5;max-width:24ch}
 .grade-t .p-when{display:flex;align-items:center;gap:6px;font-weight:700;color:#A7D8F0}
 .grade-t .p-cap{color:#F2C46D;max-width:30ch}
+.grade-t .p-set{font-weight:800;color:#FFFFFF}
 .grade-t .p-ext{display:inline-flex;align-items:center;gap:6px;width:max-content;max-width:none;font-weight:800;color:#0A1828;background:#F2C46D;border-radius:999px;padding:3px 10px}
 .pscale{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
 .pscale i{font-style:normal;font-size:.78rem;font-weight:700;padding:3px 8px;border-radius:999px;border:1px solid rgba(167,216,240,.5);color:#A7D8F0}
@@ -698,6 +703,12 @@ svg.cell{width:100%;height:auto;display:block}
 .title-grid .scale{grid-template-columns:1fr;gap:6px}
 .title-grid .scale div{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 12px}
 .title-grid .scale b{font-size:1.15rem}
+.limits .scale div{display:grid;grid-template-columns:7.5rem minmax(0,1fr);align-items:start;gap:4px 12px}
+@media (max-width:480px){.limits .scale div{grid-template-columns:1fr}}
+.limits .scale span{display:block}
+.limits .scale .ic{vertical-align:-.15em;margin-right:4px;color:var(--accent)}
+.limits-lead{margin:14px 0 0}
+.limits-note{margin:8px 0 0;color:var(--muted);font-size:.95rem}
 .wrapseg{justify-self:start}
 </style>
 </head>
@@ -1172,13 +1183,52 @@ const BADGES = {
   closed:{i:"stetho", n:"Case Closed", d:"Made the final diagnosis"}
 };
 const PUMPKINS = ["hall","r0","r1","r2","r3"];
-const PROF = {1:{name:"Emerging", range:"6 or more hints"}, 2:{name:"Proficient", range:"4 or 5 hints"}, 3:{name:"Advanced", range:"0 to 3 hints"}};
+/* Level 0 is NE (Not Enough Evidence), which ranks below Level 1. */
+const PROF = {0:{name:"Not Enough Evidence"}, 1:{name:"Emerging", range:"6 or more hints"}, 2:{name:"Proficient", range:"4 or 5 hints"}, 3:{name:"Advanced", range:"0 to 3 hints"}};
+const lvName = l => l ? `Level ${l}` : "NE";
+const lvFull = l => l ? `Level ${l}: ${PROF[l].name}` : "NE: Not Enough Evidence";
 const profOf = h => h >= 6 ? 1 : h >= 4 ? 2 : 3;
 /* Midnight cap: once active time reaches 60 minutes (12:00 AM), the best level on that attempt is 2, unless extended time was used. */
 const MIDNIGHT_MS = 60*60000;
 const pastMidnight = () => S.activeMs >= MIDNIGHT_MS;
 const capped = () => pastMidnight() && !S.extUsed;
-const levelFor = h => capped() ? Math.min(profOf(h), 2) : profOf(h);
+/* Accuracy: every challenge is worth one answer per step, and an answer counts as correct only if it was right on the first try.
+   Connections always counts its groups as correct, because trial and error is part of that challenge. */
+function stepsOf(q){
+  switch(q.type){
+    case "label": return q.pins.length;
+    case "match": return q.pairs.length;
+    case "order": return q.steps.length;
+    case "sort": return q.tiles.length;
+    case "factmyth": return q.items.length;
+    case "build": return q.rows.length;
+    case "connections": return q.groups.length;
+  }
+  return 1;
+}
+/* Records from before accuracy tracking have no n/c, so estimate first-try steps as steps minus misses. */
+function recScore(x, q){
+  if(x.n != null) return {c:x.c, n:x.n};
+  const n = stepsOf(q);
+  return {c: q.type === "connections" ? n : Math.max(0, n - x.m), n};
+}
+function accuracy(){
+  let c = 0, n = 0;
+  if(GAME) [0,1,2,3].forEach(r => roomQs(r).forEach((q,i) => { const x = S.rec[`${r}-${i}`]; if(x){ const s = recScore(x, q); c += s.c; n += s.n; } }));
+  return {c, n, pct: n ? Math.floor(100*c/n) : null};
+}
+/* Whole-number comparisons, so exactly 70% is Level 3. No answers yet means accuracy isn't limiting anything. */
+const accLevel = (c, n) => !n || 10*c >= 7*n ? 3 : 10*c >= 5*n ? 2 : 10*c >= 3*n ? 1 : 0;
+function limits(h){ const a = accuracy(); return {acc: accLevel(a.c, a.n), hints: profOf(h), time: capped() ? 2 : 3}; }
+/* Final level = the lowest of the accuracy level, the hint level, and the midnight cap. */
+const levelFor = h => { const L = limits(h); return Math.min(L.acc, L.hints, L.time); };
+const LIMIT_NAMES = {acc:"accuracy", hints:"hints", time:"the midnight time limit"};
+function setBy(h){
+  const L = limits(h), lv = Math.min(L.acc, L.hints, L.time);
+  if(lv === 3) return "";
+  const ks = Object.keys(L).filter(k => L[k] === lv).map(k => LIMIT_NAMES[k]);
+  return ks.length > 1 ? ks.slice(0, -1).join(", ") + (ks.length > 2 ? "," : "") + " and " + ks[ks.length - 1] : ks[0];
+}
 
 const RIGHT = ["Correct! A letter flickers to life on the lock.","Correct! Somewhere down the hall, a door creaks open.","Correct! Dr. Bones rattles with approval.","Correct! The blue lamp burns a little brighter."];
 const RIGHT_FINAL = ["Correct! The heart monitor steadies a little.","Correct! Dr. Bones gives a slow, proud nod.","Correct! The lights in Room 13 flicker back on."];
@@ -1188,7 +1238,7 @@ const QUIPS_IDLE = ["Stuck? Click me for a hint, but remember, hints count towar
 
 /* ======================= STATE ======================= */
 const KEY = "mustang-memorial-escape-v4";
-function freshCur(){ return {scope:false,sel:null,elim:[],misses:0,hint:false,ask:false,placed:{},picked:[],found:[],csel:[],fm:{},build:{},wrongRows:[],matchDone:[],msel:null,pos:0,bounce:null,wrongRow:null,msg:"",msgType:"",just:false,bad:false}; }
+function freshCur(){ return {scope:false,sel:null,elim:[],misses:0,wm:{},wmc:0,bt:false,hint:false,ask:false,placed:{},picked:[],found:[],csel:[],fm:{},build:{},wrongRows:[],matchDone:[],msel:null,pos:0,bounce:null,wrongRow:null,msg:"",msgType:"",just:false,bad:false}; }
 function fresh(keep){
   keep = keep || {};
   return {v:4,screen:"title",name:keep.name || "",nameDraft:keep.name || "",caseId:null,pendingCase:null,seed:0,attempt:keep.attempt || 0,history:keep.history || [],
@@ -1570,8 +1620,8 @@ function crestSVG(level){
     <defs><linearGradient id="crestG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7BAFD4"/><stop offset="1" stop-color="#2F6EA3"/></linearGradient></defs>
     <path d="M50,4 L92,18 V56 C92,84 72,104 50,112 C28,104 8,84 8,56 V18 Z" fill="url(#crestG)" stroke="#FFFFFF" stroke-width="4"/>
     <path d="M50,14 L82,25 V56 C82,78 67,94 50,101 C33,94 18,78 18,56 V25 Z" fill="#0A1828" stroke="#A7D8F0" stroke-width="2"/>
-    <text x="50" y="40" text-anchor="middle" font-family="Alegreya Sans, sans-serif" font-weight="800" font-size="11" fill="#A7D8F0" letter-spacing="1">LEVEL</text>
-    <text x="50" y="84" text-anchor="middle" font-family="Pirata One, Georgia, serif" font-size="50" fill="#FFFFFF">${level}</text>
+    <text x="50" y="40" text-anchor="middle" font-family="Alegreya Sans, sans-serif" font-weight="800" font-size="11" fill="#A7D8F0" letter-spacing="1">${level ? "LEVEL" : "RESULT"}</text>
+    <text x="50" y="${level ? 84 : 80}" text-anchor="middle" font-family="Pirata One, Georgia, serif" font-size="${level ? 50 : 38}" fill="#FFFFFF">${level || "NE"}</text>
   </svg>`;
 }
 
@@ -1998,19 +2048,26 @@ function avatarPicker(){
 }
 
 function topbar(){
-  const n = [0,1,2].filter(doneRoom).length, lv = levelFor(S.hints);
+  const n = [0,1,2].filter(doneRoom).length, lv = levelFor(S.hints), a = accuracy(), L = limits(S.hints);
+  const chipTip = `${lvFull(lv)}, the lowest of your accuracy, hints, and time limits${setBy(S.hints) ? `. Right now it’s set by ${setBy(S.hints)}` : ""}`;
   return `<header class="topbar"><div class="brand">Midnight at Mustang Memorial</div>
     <div class="tools">
       <span class="hud" title="Mustang points">${avatarSVG(avIdx(), "hud-av")} <span data-pts>${shownPts.toLocaleString()}</span>${S.streak >= 2 ? ` <span class="streak" title="First-try streak">${ic("flame")}${S.streak}</span>` : ""}
-        <span class="hud-sep"></span><span title="Hints used. Your proficiency level is based on hints.">${ic("skull")} ${S.hints} hint${S.hints === 1 ? "" : "s"}</span> <span class="lvchip${capped() ? " capped" : ""}" title="${PROF[lv].name}${capped() ? ". Capped at Level 2 after midnight" : ""}">Level ${lv}${capped() && profOf(S.hints) === 3 ? " (max)" : ""}</span></span>
+        <span class="hud-sep"></span><span class="hud-lv"><span title="Answers right on the first try${a.n ? `: ${a.c} of ${a.n}` : ""}">${ic("check")} Accuracy ${a.pct == null ? "–" : a.pct + "%"}</span> <span title="Hints used">${ic("skull")} ${S.hints} hint${S.hints === 1 ? "" : "s"}</span> <span class="lvchip${capped() ? " capped" : ""}" title="${chipTip}">${lvName(lv)}${capped() && lv === 2 && Math.min(L.acc, L.hints) === 3 ? " (max)" : ""}</span></span></span>
       <span class="clock${clockRunning() ? "" : " paused"}"><span class="candle">${ic("candle")}</span> <span data-clock>${clockText()}</span><span class="clock-p">paused</span></span>
       <button class="chip" data-act="case">${ic("folder")} Case file ${n}/3</button>
       <button class="chip" data-act="sound" aria-label="${PREFS.sound ? "Turn sound off" : "Turn sound on"}" title="${PREFS.sound ? "Sound on" : "Sound off"}">${ic(PREFS.sound ? "sound" : "mute")}</button>
       <button class="chip" data-act="menu">${ic("menu")} Menu</button>
     </div></header>`;
 }
-function scaleHTML(active){
-  return `<div class="scale">${[1,2,3].map(l => `<div class="${active === l ? "on" : ""}"><b>Level ${l}: ${PROF[l].name}</b><span>${ic("skull")} ${PROF[l].range}</span></div>`).join("")}</div>`;
+function limitsHTML(){
+  return `<div class="limits"><p class="limits-lead">Your proficiency level is the <b>lowest</b> of three limits:</p>
+    <div class="scale">
+      <div><b>${ic("check")}Accuracy</b><span>70% or more: Level 3. 50–69%: Level 2. 30–49%: Level 1. Under 30%: NE (Not Enough Evidence).</span></div>
+      <div><b>${ic("skull")}Hints</b><span>0–3 hints: Level 3. 4–5 hints: Level 2. 6 or more: Level 1.</span></div>
+      <div><b>${ic("clock")}Time limit</b><span>If you reach midnight (60 minutes of play), the most you can earn is Level 2.</span></div>
+    </div>
+    <p class="limits-note">Accuracy counts the answers you get right on the first try. In bigger challenges, every label, match, step, sorted cell, statement, and build setting is its own answer.</p></div>`;
 }
 
 function viewTitle(){
@@ -2019,7 +2076,7 @@ function viewTitle(){
     <div class="hero-tools"><button class="chip" data-act="sound" aria-label="${PREFS.sound ? "Turn sound off" : "Turn sound on"}">${ic(PREFS.sound ? "sound" : "mute")}</button><button class="chip" data-act="settings">${ic("gear")} Settings</button></div>
     <div class="hero-text"><p class="kicker">A Clinical Escape Room on Cell Structure and Function</p>
     <h1${titleShown ? "" : ' class="flick"'}>Midnight at Mustang Memorial</h1></div></div>`;
-  const hist = S.history.length ? `<div class="history"><b>Your past escapes</b><br>${S.history.map(h => `${CASE_BY[h.c] ? CASE_BY[h.c].first : "Patient"}: Level ${h.l} (${h.h} hint${h.h === 1 ? "" : "s"})`).join(", ")}</div>` : "";
+  const hist = S.history.length ? `<div class="history"><b>Your past escapes</b><br>${S.history.map(h => `${CASE_BY[h.c] ? CASE_BY[h.c].first : "Patient"}: ${lvName(h.l)} (${h.a != null ? `${h.a}% accuracy, ` : ""}${h.h} hint${h.h === 1 ? "" : "s"})`).join(", ")}</div>` : "";
   if(has){
     const C = P();
     return `<section class="title">${hero}<div class="title-body">
@@ -2034,8 +2091,8 @@ function viewTitle(){
   return `<section class="title">${hero}<div class="title-body title-grid">
     <div>
       <p class="lede">It’s 11:00 PM on the night shift, and you’re the newest intern at Mustang Memorial Hospital. Up in Room 13, a patient is getting worse by the hour, and nobody can figure out why.</p>
-      <p class="how">The chief pathologist locked his notes behind three doors. Beat the challenges inside each room to earn clues, then use the clues to make the diagnosis. Wrong answers never trap you, so keep trying. If you’re truly stuck, Dr. Bones the hospital skeleton can give you a hint, but every hint you use counts toward your final proficiency level.</p>
-      ${scaleHTML(0)}
+      <p class="how">The chief pathologist locked his notes behind three doors. Beat the challenges inside each room to earn clues, then use the clues to make the diagnosis. Wrong answers never trap you, so you can always keep going until you get it, but your first-try accuracy counts. If you’re truly stuck, Dr. Bones the hospital skeleton can give you a hint, but hints count too.</p>
+      ${limitsHTML()}
       <div class="field"><label for="nm">Your first and last name</label><input id="nm" type="text" maxlength="60" value="${esc(S.nameDraft)}" placeholder="This goes on your escape poster" autocomplete="name"></div>
       ${avatarPicker()}
     </div>
@@ -2227,7 +2284,7 @@ function hintBlock(q){
   if(c.hint) return `<div class="hint" tabindex="-1">${ic("skull")} <strong>Dr. Bones:</strong> ${fill(q.hint)}</div>`;
   if(c.ask){
     const nh = S.hints + 1, nl = levelFor(nh), cl = levelFor(S.hints);
-    const msg = nl < cl ? `This would be hint ${nh}. It would move you from Level ${cl} (${PROF[cl].name}) to Level ${nl} (${PROF[nl].name}).` : `This would be hint ${nh}. You’d stay on track for Level ${nl} (${PROF[nl].name}).`;
+    const msg = nl < cl ? `This would be hint ${nh}. It would move you from ${lvFull(cl)} to ${lvFull(nl)}.` : `This would be hint ${nh}. You’d stay on track for ${lvFull(nl)}.`;
     return `<div class="hintask" role="alertdialog" aria-label="Use a hint?"><p>${ic("skull")} ${msg} Use it?</p><div class="row"><button class="btn small" data-act="hintyes">Use the hint</button><button class="btn quiet small" data-act="hintno">Never mind, I’ll keep trying</button></div></div>`;
   }
   return `<button class="linkbtn" data-act="hint">${ic("skull")} Ask Dr. Bones for a hint</button>`;
@@ -2300,9 +2357,10 @@ function levelData(r){
   return {recs, first: recs.filter(x => !x.miss && x.m === 0 && !x.h).length, hints: recs.filter(x => x.h).length, n: qs.length};
 }
 function viewPoster(){
-  const C = P(), lv = levelFor(S.hints), hintLv = profOf(S.hints);
+  const C = P(), lv = levelFor(S.hints), a = accuracy(), Lm = limits(S.hints), by = setBy(S.hints);
   const names = ["Level 1: identify organelles","Level 2: organelle jobs","Level 3: specialized cells","Final: diagnosis"];
   const L = [0,1,2,3].map(levelData);
+  const roomAcc = r => roomQs(r).reduce((t,q,i) => { const x = S.rec[`${r}-${i}`]; if(x){ const sc = recScore(x, q); t.c += sc.c; t.n += sc.n; } return t; }, {c:0, n:0});
   const struggles = [];
   [0,1,2,3].forEach(r => roomQs(r).forEach((q,i) => {
     const x = S.rec[`${r}-${i}`]; if(!x || !(x.m > 0 || x.h)) return;
@@ -2323,12 +2381,14 @@ function viewPoster(){
         <p class="p-sub">Solved “${C.title}” and diagnosed ${C.first} with ${C.dxShort}.</p>
         <div class="stamp">Case closed<small>${date}, attempt ${S.attempt}</small></div>
       </div>
-      <div><div class="grade">${crestSVG(lv)}<div class="grade-t"><b>Proficiency Level ${lv}</b><span>${PROF[lv].name}</span>
-        <small>Earned with ${S.hints} hint${S.hints === 1 ? "" : "s"} from Dr. Bones.</small>
+      <div><div class="grade">${crestSVG(lv)}<div class="grade-t">${lv ? `<b>Proficiency Level ${lv}</b><span>${PROF[lv].name}</span>` : `<b>NE: Not Enough Evidence</b>`}
+        <small>${ic("check")} Accuracy: ${a.pct == null ? "–" : a.pct + "%"} (${a.c} of ${a.n} correct on the first try)</small>
+        <small>${ic("skull")} ${S.hints} hint${S.hints === 1 ? "" : "s"} from Dr. Bones</small>
         <small class="p-when">${ic("clock")} ${pastMidnight() ? "Escaped after midnight" : "Escaped before midnight"}</small>
-        ${capped() && hintLv === 3 ? `<small class="p-cap">That means this attempt is capped at Level 2. Try another patient to aim for Level 3.</small>` : ""}
         ${S.extUsed ? `<small class="p-ext">${ic("clock")} Extended time used</small>` : ""}
-        <div class="pscale">${[1,2,3].map(l => `<i class="${l === lv ? "on" : ""}">L${l}: ${l === 3 ? "0–3" : l === 2 ? "4–5" : "6+"} hints</i>`).join("")}</div></div></div>
+        <small class="p-set">${by ? `Your level was set by: ${by}` : "Accuracy, hints, and time all reached Level 3!"}</small>
+        ${lv === 0 ? `<small class="p-cap">NE isn’t a failing grade. It just means this game didn’t gather enough evidence of what you know yet. Try another patient and show what you’ve learned!</small>` : ""}
+        <div class="pscale">${[["acc","Accuracy"],["hints","Hints"],["time","Time"]].map(([k,t]) => `<i class="${Lm[k] === lv && lv < 3 ? "on" : ""}">${t}: ${lvName(Lm[k])}</i>`).join("")}</div></div></div>
       ${skylineSVG()}</div>
     </div>
     <div class="p-stats" style="margin-top:14px">
@@ -2339,10 +2399,10 @@ function viewPoster(){
     </div>
     <div class="p-grid">
       <div class="p-box"><h3>My evidence</h3>
-        ${L.map((d,r) => `<div class="lvl"><span class="lvl-name">${names[r]}</span><span class="lvl-score">${d.first}/${d.n} first try</span>
+        ${L.map((d,r) => `<div class="lvl"><span class="lvl-name">${names[r]}</span><span class="lvl-score">${roomAcc(r).c}/${roomAcc(r).n} right first try</span>
           <div class="segs">${d.recs.map((x,k) => `<i class="${x.miss ? "" : (x.m === 0 && !x.h ? "ok" : "meh")}" title="${esc(roomQs(r)[k].tag)}"></i>`).join("")}</div>
           <span class="lvl-hints">${d.hints} hint${d.hints === 1 ? "" : "s"} used here</span></div>`).join("")}
-        <p class="p-legend">Solid bar: solved on the first try. Striped bar: solved after a miss or a hint.</p>
+        <p class="p-legend">Scores count every answer, including each step of bigger challenges. Solid bar: challenge solved on the first try. Striped bar: solved after a miss or a hint.</p>
       </div>
       <div class="p-box"><h3>My next steps</h3>
         ${struggles.length ? `<ul class="p-list">${struggles.slice(0,maxList).map(s => s.html).join("")}${more > 0 ? `<li>…plus ${more} more</li>` : ""}</ul>` : `<p style="margin:0">Nothing to review. A flawless night shift!</p>`}
@@ -2354,7 +2414,7 @@ function viewPoster(){
   </section>
   <div class="card dxcard"><h3 style="margin:0 0 6px;font-size:1.6rem">About ${C.dxShort}</h3><p style="margin:0">${C.dx}</p></div>
   <div class="row" style="max-width:940px;margin:18px auto 0">
-    ${lv < 3 ? `<p style="width:100%;margin:0">Want to aim for Level ${lv + 1}? Try another patient. The challenges shuffle, so it’ll be a new game.</p>` : ""}
+    ${lv === 0 ? `<p style="width:100%;margin:0">Every expert started somewhere. Try another patient to gather more evidence and earn a level. The challenges shuffle, so it’ll be a new game.</p>` : lv < 3 ? `<p style="width:100%;margin:0">Want to aim for Level ${lv + 1}? Try another patient. The challenges shuffle, so it’ll be a new game.</p>` : ""}
     <button class="btn" data-act="again">${ic("restart")} Try another patient</button>
     <button class="btn quiet" data-act="hall">${ic("door")} Back to the hallway</button>
     <button class="btn quiet" data-act="badges">${ic("medal")} See all badges</button></div>`;
@@ -2383,7 +2443,7 @@ function viewOverlay(){
         <button class="btn danger" data-act="restart">${ic("restart")} Start completely over</button>
       </div>
       <p class="menu-note">${saveOk ? "Your progress saves automatically in this browser after every move." : "This browser is blocking saving. Use a backup code so you don’t lose progress."}</p>
-      <p class="menu-note">Hints used so far: ${S.hints} (on track for Level ${levelFor(S.hints)}: ${PROF[levelFor(S.hints)].name}${capped() ? ", the most you can earn after midnight" : ""}).</p>`;
+      <p class="menu-note">So far: ${accuracy().pct == null ? "no answers yet" : `${accuracy().pct}% accuracy (${accuracy().c} of ${accuracy().n} right on the first try)`} and ${S.hints} hint${S.hints === 1 ? "" : "s"}. You’re on track for ${lvFull(levelFor(S.hints))}${setBy(S.hints) ? `, set by ${setBy(S.hints)}` : ""}.</p>`;
   } else if(S.overlay === "settings"){
     const cur = k => PREFS[k] === true ? "1" : PREFS[k] === false ? "0" : String(PREFS[k]);
     const seg = (k, opts) => `<div class="seg wrapseg">${opts.map(([v,l,style]) => `<button class="${cur(k) === v ? "on" : ""}" aria-pressed="${cur(k) === v}" data-act="setpref" data-k="${k}" data-v="${v}" ${style ? `style="${style}"` : ""}>${l}</button>`).join("")}</div>`;
@@ -2411,6 +2471,7 @@ function viewOverlay(){
   return `<div class="overlay" data-overlay><div class="sheet${pop ? " pop" : ""}" role="dialog" aria-modal="true">${inner}</div></div>`;
 }
 function exportCode(){
+  stash();
   const keep = Object.assign({}, S); delete keep.overlay; delete keep.cur; delete keep.warn;
   try{ return btoa(unescape(encodeURIComponent(JSON.stringify(keep)))); }catch(e){ return ""; }
 }
@@ -2433,9 +2494,17 @@ function closeOverlay(){
   if(S.overlay === "mitosis" && mitoBack) focusSel = mitoBack;
   S.overlay = null; mitoBack = null;
 }
-function setView(i){ S.view = i; S.cur = freshCur(); focusSel = ".prompt"; enterFx = true; }
+/* Misses (and a hint already paid for) on an unsolved challenge stay with it when the student leaves and comes back,
+   so stepping away can't reset first-try accuracy. */
+function stash(){
+  const c = S.cur; if(!c.key || !(c.misses || c.hint)) return;
+  const [r, i] = c.key.split("-").map(Number); if(i < S.prog[r]) return;
+  S.pend = S.pend || {}; S.pend[c.key] = {misses:c.misses, wm:c.wm, wmc:c.wmc, bt:c.bt, hint:c.hint};
+}
+function setView(i){ stash(); S.view = i; const key = `${S.room}-${i}`; S.cur = Object.assign(freshCur(), (S.pend && S.pend[key]) || {}, {key}); focusSel = ".prompt"; enterFx = true; }
 function enterRoom(r){
   if(!(r === 0 || doneRoom(r-1))) return;
+  stash();
   S.room = r; S.screen = "room"; sfx("door");
   setView(doneRoom(r) ? 0 : S.prog[r]);
   window.scrollTo(0,0);
@@ -2448,13 +2517,18 @@ function miss(text, opts){
   if(opts && opts.row != null) c.wrongRow = opts.row;
   sfx("wrong"); bonesSay(pick(QUIPS_SAD), "sad"); save(); render();
 }
+/* Charge a miss to one step of a multi-step challenge (only its first-try correctness matters). */
+function stepMiss(id){ const c = S.cur; c.wm[id] = 1; c.wmc++; }
 function solve(){
-  const r = S.room, i = S.view, c = S.cur;
+  const r = S.room, i = S.view, c = S.cur, q = curQ();
   const base = c.misses === 0 ? 100 : c.misses === 1 ? 60 : 30;
   let pts = c.hint ? Math.max(10, base - 20) : base;
   if(c.misses === 0 && !c.hint){ S.streak++; S.bestStreak = Math.max(S.bestStreak, S.streak); if(S.streak >= 3) pts += 25; } else S.streak = 0;
-  S.rec[`${r}-${i}`] = {m:c.misses, h:c.hint};
+  /* Misses made before step tracking existed (an older save mid-challenge) are estimated, one step each. */
+  const n = stepsOf(q), untracked = Math.max(0, c.misses - c.wmc);
+  S.rec[`${r}-${i}`] = {m:c.misses, h:c.hint, n, c: q.type === "connections" ? n : Math.max(0, n - Object.keys(c.wm).length - untracked)};
   S.prog[r] = Math.max(S.prog[r], i + 1);
+  if(S.pend) delete S.pend[`${r}-${i}`];
   c.just = true; c.sel = null; c.ask = false;
   c.msg = pick(r < 3 ? RIGHT : RIGHT_FINAL) + (S.streak >= 3 ? ` ${S.streak} in a row! Streak bonus!` : ""); c.msgType = "good";
   addPoints(pts); sparkle(); fx = "pulse"; focusSel = '[data-act="next"]';
@@ -2466,7 +2540,7 @@ function solve(){
       S.finished = true; award("closed");
       if(S.activeMs <= 60*60000) award("owl");
       if(S.hints === 0) award("fearless");
-      S.history.push({c:S.caseId, h:S.hints, l:levelFor(S.hints), p:S.points, d:new Date().toISOString().slice(0,10)});
+      S.history.push({c:S.caseId, h:S.hints, a:accuracy().pct, l:levelFor(S.hints), p:S.points, d:new Date().toISOString().slice(0,10)});
     }
   }
   sfx(r < 3 ? "correct" : "chime"); bonesSay(pick(QUIPS_HAPPY), "happy"); save(); render();
@@ -2497,7 +2571,7 @@ function matchClick(side, i){
     c.matchDone.push(i); c.msel = null;
     if(c.matchDone.length === q.pairs.length){ solve(); return; }
     sfx("drop"); c.msg = "Matched! The label sticks to the bottle."; c.msgType = "good"; save(); render();
-  } else { c.msel = null; miss("That label slides right off. That organelle does a different job."); }
+  } else { stepMiss(c.msel.i); c.msel = null; miss("That label slides right off. That organelle does a different job."); }
 }
 function dropItem(id, tid){
   const q = curQ(), c = S.cur; if(isSolved()) return;
@@ -2506,14 +2580,14 @@ function dropItem(id, tid){
   if(q.type === "label" && kind === "L"){
     const pin = q.pins.find(p => p.pin === tid); if(!pin || c.placed[tid] != null) return;
     if(pin.ans === idx){ c.placed[tid] = idx; sfx("drop"); sparkle(); if(Object.keys(c.placed).length === q.pins.length){ solve(); return; } c.msg = `Yes! ${q.labels[idx]} goes on pin ${tid}.`; c.msgType = "good"; save(); render(); }
-    else miss(`${q.labels[idx]} doesn’t belong on pin ${tid}.`, {bounce:id});
+    else { stepMiss(tid); miss(`${q.labels[idx]} doesn’t belong on pin ${tid}.`, {bounce:id}); }
   } else if(q.type === "order" && kind === "O"){
     if(idx === c.pos){ c.pos++; sfx("drop"); sparkle(); if(c.pos === q.steps.length){ solve(); return; } c.msg = "That’s the next step!"; c.msgType = "good"; save(); render(); }
-    else miss("That step doesn’t come next. Think about where this process starts.", {bounce:id});
+    else { stepMiss(c.pos); miss("That step doesn’t come next. Think about where this process starts.", {bounce:id}); }
   } else if(q.type === "sort" && kind === "T"){
     if(c.placed[idx] != null) return;
     if(q.tiles[idx].bin === tid){ c.placed[idx] = tid; sfx("drop"); sparkle(); if(Object.keys(c.placed).length === q.tiles.length){ solve(); return; } c.msg = "Into the bin it goes!"; c.msgType = "good"; save(); render(); }
-    else miss("That cell doesn’t belong in that bin. Think about what it spends its day doing.", {bounce:id});
+    else { stepMiss(idx); miss("That cell doesn’t belong in that bin. Think about what it spends its day doing.", {bounce:id}); }
   }
 }
 function letter(i){
@@ -2535,13 +2609,16 @@ function ccheck(){
 function fmAnswer(i, v){
   const q = curQ(), c = S.cur; if(isSolved() || c.fm[i]) return;
   if(q.items[i].fact === v){ c.fm[i] = true; sfx("tick"); sparkle(); if(Object.keys(c.fm).length === q.items.length){ solve(); return; } c.msg = "Correct!"; c.msgType = "good"; save(); render(); }
-  else miss(v ? "Myth! That one sounds true, but it isn’t." : "Actually, that one’s a fact!", {row:i});
+  else { stepMiss(i); miss(v ? "Myth! That one sounds true, but it isn’t." : "Actually, that one’s a fact!", {row:i}); }
 }
 function btest(){
   const q = curQ(), c = S.cur;
   const wrong = q.rows.map((r,i) => c.build[i] === r.ans ? -1 : i).filter(i => i >= 0);
+  /* Rows count by the first "Test my cell" only. A test made before tracking existed shows up as an untracked miss. */
+  const first = !c.bt && c.misses === c.wmc; c.bt = true;
   if(!wrong.length){ c.wrongRows = []; solve(); return; }
-  c.wrongRows = wrong; miss(`Your cell didn’t pass the test. ${wrong.length} setting${wrong.length > 1 ? "s need" : " needs"} rethinking.`);
+  if(first) wrong.forEach(k => c.wm[k] = 1);
+  c.wmc++; c.wrongRows = wrong; miss(`Your cell didn’t pass the test. ${wrong.length} setting${wrong.length > 1 ? "s need" : " needs"} rethinking.`);
 }
 function startGame(caseId){
   const name = (S.nameDraft || "").trim().replace(/\s+/g, " ");
@@ -2602,7 +2679,7 @@ function act(a, d){
     case "hint": doHint(); return;
     case "hintyes": useHint(); return;
     case "hintno": c.ask = false; bonesSay("That’s the spirit. You’ve got this!", "happy"); break;
-    case "hall": S.overlay = null; S.screen = "hall"; S.cur = freshCur(); window.scrollTo(0,0); break;
+    case "hall": S.overlay = null; S.screen = "hall"; stash(); S.cur = freshCur(); window.scrollTo(0,0); break;
     case "poster": S.overlay = null; S.screen = "poster"; window.scrollTo(0,0); break;
     case "case": S.overlay = "case"; sheetPop = true; focusSel = '[data-act="close"]'; break;
     case "menu": S.overlay = "menu"; sheetPop = true; focusSel = '[data-act="close"]'; break;
